@@ -103,18 +103,12 @@ function App() {
               </AnimatePresence>
             </main>
 
-            <motion.footer
-              initial={{ y: 50 }}
-              animate={{ y: 0 }}
-              className="bg-eco-primary text-white py-6 mt-auto"
-            >
-              <div className="container mx-auto px-4 text-center">
-                <p>© 2024 EcoChallenge Champions. Making the world greener, one challenge at a time.</p>
-              </div>
-            </motion.footer>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <footer className="bg-eco-primary text-white py-6 mt-auto">
+          <div className="container mx-auto px-4 text-center">
+            <p>© 2025 Verdant. Making the world greener, one challenge at a time.</p>
+          </div>
+        </footer>
+      </div>
     </Router>
   );
 }
