@@ -9,7 +9,247 @@ interface OnboardingProps {
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) => {
-  // ... previous state and steps code remains the same ...
+  const [step, setStep] = useState(0);
+  const [formData, setFormData] = useState({
+    name: '',
+    transport: {
+      car: false,
+      publicTransport: false,
+      bike: false,
+      walk: false
+    },
+    home: {
+      houseType: '',
+      occupants: '1', // Changed to string to handle input value properly
+      renewable: false
+    },
+    consumption: {
+      meatConsumption: 'medium',
+      shopping: 'medium',
+      recycling: false
+    },
+    dataSources: {
+      smartHome: false,
+      fitnessTacker: false,
+      smartCar: false
+    }
+  });
+
+  const steps = [
+    {
+      title: "Welcome to Verdant",
+      description: "Let's create your personalized sustainability journey",
+      icon: Lightbulb,
+      type: 'welcome'
+    },
+    {
+      title: "Transportation Habits",
+      description: "How do you usually get around?",
+      icon: Car,
+      type: 'transport'
+    },
+    {
+      title: "Home & Energy",
+      description: "Tell us about your living situation",
+      icon: Home,
+      type: 'home'
+    },
+    {
+      title: "Consumption Patterns",
+      description: "Let's understand your daily habits",
+      icon: ShoppingBag,
+      type: 'consumption'
+    },
+    {
+      title: "Connect Data Sources",
+      description: "Enhance your experience with smart tracking",
+      icon: Database,
+      type: 'dataSources'
+    }
+  ];
+
+  const handleNext = () => {
+    if (step === steps.length - 1) {
+      // Convert occupants back to number before submitting
+      const submissionData = {
+        ...formData,
+        home: {
+          ...formData.home,
+          occupants: parseInt(formData.home.occupants, 10)
+        }
+      };
+      onComplete(submissionData);
+    } else {
+      setStep(step + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+  };
+
+  const handleOccupantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow positive numbers
+    if (value === '' || parseInt(value, 10) > 0) {
+      setFormData(prev => ({
+        ...prev,
+        home: { ...prev.home, occupants: value }
+      }));
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (steps[step].type) {
+      case 'welcome':
+        return (
+          <div className="text-center space-y-6">
+            <img src="/logo.png" alt="Verdant Logo" className="w-24 h-24 mx-auto" />
+            <h2 className="text-2xl font-bold text-eco-primary">Welcome to Verdant</h2>
+            <p className="text-gray-600">
+              Join our community of eco-conscious individuals making a difference.
+              Let's start by understanding your current lifestyle.
+            </p>
+          </div>
+        );
+
+      case 'transport':
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(formData.transport).map(([key, value]) => (
+                <button
+                  key={key}
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    transport: { ...prev.transport, [key]: !value }
+                  }))}
+                  className={`p-4 rounded-lg border-2 transition-colors ${
+                    value ? 'border-eco-primary bg-eco-accent' : 'border-gray-200'
+                  }`}
+                >
+                  <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'home':
+        return (
+          <div className="space-y-4">
+            <select
+              value={formData.home.houseType}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                home: { ...prev.home, houseType: e.target.value }
+              }))}
+              className="w-full p-2 border-2 rounded-lg"
+            >
+              <option value="">Select house type</option>
+              <option value="apartment">Apartment</option>
+              <option value="house">House</option>
+              <option value="condo">Condo</option>
+            </select>
+            <div className="flex items-center justify-between">
+              <span>Number of occupants:</span>
+              <input
+                type="number"
+                min="1"
+                value={formData.home.occupants}
+                onChange={handleOccupantsChange}
+                className="w-20 p-2 border-2 rounded-lg"
+              />
+            </div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.home.renewable}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  home: { ...prev.home, renewable: e.target.checked }
+                }))}
+              />
+              <span>I use renewable energy</span>
+            </label>
+          </div>
+        );
+
+      case 'consumption':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block">Meat consumption:</label>
+              <select
+                value={formData.consumption.meatConsumption}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, meatConsumption: e.target.value }
+                }))}
+                className="w-full p-2 border-2 rounded-lg"
+              >
+                <option value="low">Low (0-2 times/week)</option>
+                <option value="medium">Medium (3-5 times/week)</option>
+                <option value="high">High (6+ times/week)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="block">Shopping frequency:</label>
+              <select
+                value={formData.consumption.shopping}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, shopping: e.target.value }
+                }))}
+                className="w-full p-2 border-2 rounded-lg"
+              >
+                <option value="low">Low (essential only)</option>
+                <option value="medium">Medium (occasional)</option>
+                <option value="high">High (frequent)</option>
+              </select>
+            </div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.consumption.recycling}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, recycling: e.target.checked }
+                }))}
+              />
+              <span>I regularly recycle</span>
+            </label>
+          </div>
+        );
+
+      case 'dataSources':
+        return (
+          <div className="space-y-4">
+            {Object.entries(formData.dataSources).map(([key, value]) => (
+              <label key={key} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={value}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    dataSources: { ...prev.dataSources, [key]: e.target.checked }
+                  }))}
+                />
+                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+              </label>
+            ))}
+            <p className="text-sm text-gray-600 mt-2">
+              Connecting data sources helps us provide more accurate recommendations
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const StepIcon = steps[step].icon;
 
   return (
     <div className="fixed inset-0 bg-eco-background flex items-center justify-center p-4 z-50">
@@ -28,12 +268,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
               <p className="text-sm text-gray-600">{steps[step].description}</p>
             </div>
           </div>
-          <button
-            onClick={onSkip}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            Skip Setup
-          </button>
+          {step > 0 && (
+            <button
+              onClick={onSkip}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         <div className="mb-8">
@@ -45,7 +287,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`h-1 w-8 rounded-full transition-colors ${
+                className={`h-1 w-8 rounded-full ${
                   index === step ? 'bg-eco-primary' : 'bg-gray-200'
                 }`}
               />
@@ -55,7 +297,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
             {step > 0 && (
               <button
                 onClick={handleBack}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
@@ -63,7 +305,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
             )}
             <button
               onClick={handleNext}
-              className="flex items-center space-x-2 bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary transition-colors"
+              className="flex items-center space-x-2 bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
             >
               <span>{step === steps.length - 1 ? 'Complete' : 'Next'}</span>
               {step === steps.length - 1 ? (
