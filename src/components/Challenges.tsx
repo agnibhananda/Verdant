@@ -24,7 +24,7 @@ const Challenges = () => {
     {
       icon: Recycle,
       title: 'Zero Waste Challenge',
-      description: 'Produce zero non-recyclable waste for an entire week.',
+      description: 'Produce zero non-recyclable waste for an entire week. Sustainable Living Transformation ',
       category: 'waste',
       points: 750,
       difficulty: 'Hard',
