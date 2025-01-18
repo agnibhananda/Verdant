@@ -45,7 +45,7 @@ function App() {
                   className="flex items-center space-x-2"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <img src="./public/logo.png" style= "height:42px ; width:auto" />/
+                  <Leaf className="h-8 w-8" />
                   <h1 className="text-2xl font-bold">Verdant</h1>
                 </motion.div>
                 <Navigation />
