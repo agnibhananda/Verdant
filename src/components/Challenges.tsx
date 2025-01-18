@@ -71,7 +71,6 @@ const Challenges = () => {
   const handleVerification = (challengeId: string, method: string) => {
     switch (method) {
       case 'photo':
-        // In a real app, this would open the camera/file upload
         setVerificationData(prev => ({
           ...prev,
           [challengeId]: { status: 'pending', proof: 'Photo submitted for review' }
@@ -84,7 +83,6 @@ const Challenges = () => {
         }));
         break;
       case 'location':
-        // In a real app, this would check location
         setVerificationData(prev => ({
           ...prev,
           [challengeId]: { status: 'pending', proof: 'Location verification in progress' }
@@ -195,24 +193,16 @@ const Challenges = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex">
-                <button
-                  onClick={() => setSelectedChallenge(challenge)}
-                  className="flex-1 py-3 bg-eco-accent text-eco-primary font-semibold hover:bg-eco-background transition-colors"
-                >
-                  View Details
-                </button>
-                <button
-                  onClick={() => handleJoinChallenge(challenge.id)}
-                  className={`flex-1 py-3 font-semibold transition-colors ${
-                    isJoined
-                      ? 'bg-eco-secondary text-white hover:bg-eco-primary'
-                      : 'bg-eco-primary text-white hover:bg-eco-secondary'
-                  }`}
-                >
-                  {isJoined ? 'Leave Challenge' : 'Join Challenge'}
-                </button>
-              </div>
+              <button
+                onClick={isJoined ? () => handleJoinChallenge(challenge.id) : () => setSelectedChallenge(challenge)}
+                className={`w-full py-3 font-semibold transition-colors ${
+                  isJoined
+                    ? 'bg-eco-secondary text-white hover:bg-eco-primary'
+                    : 'bg-eco-primary text-white hover:bg-eco-secondary'
+                }`}
+              >
+                {isJoined ? 'Leave' : 'View Details'}
+              </button>
             </motion.div>
           );
         })}
@@ -273,13 +263,9 @@ const Challenges = () => {
                   </button>
                   <button
                     onClick={() => handleJoinChallenge(selectedChallenge.id)}
-                    className={`flex-1 py-3 font-semibold rounded-lg transition-colors ${
-                      joinedChallenges.includes(selectedChallenge.id)
-                        ? 'bg-eco-secondary text-white hover:bg-eco-primary'
-                        : 'bg-eco-primary text-white hover:bg-eco-secondary'
-                    }`}
+                    className="flex-1 py-3 bg-eco-primary text-white font-semibold rounded-lg hover:bg-eco-secondary transition-colors"
                   >
-                    {joinedChallenges.includes(selectedChallenge.id) ? 'Leave Challenge' : 'Join Challenge'}
+                    Join Challenge
                   </button>
                 </div>
               </div>
