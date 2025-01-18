@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export const CarbonTracker = () => {
   const [carbonData, setCarbonData] = useState({
@@ -11,10 +11,19 @@ export const CarbonTracker = () => {
 
   const updateCarbonData = (category: keyof typeof carbonData, value: number) => {
     setCarbonData(prev => {
+      const multipliers = {
+        transport: 0.2,
+        energy: 0.5,
+        waste: 2.5
+      };
+      
+      const newValue = value * (multipliers[category as keyof typeof multipliers] || 1);
+      
       const newData = {
         ...prev,
-        [category]: value
+        [category]: newValue
       };
+      
       newData.total = newData.transport + newData.energy + newData.waste;
       return newData;
     });
@@ -36,8 +45,8 @@ export const CarbonTracker = () => {
           <input
             type="number"
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
-            value={carbonData.transport}
-            onChange={(e) => updateCarbonData('transport', Number(e.target.value) * 0.2)}
+            value={carbonData.transport / 0.2}
+            onChange={(e) => updateCarbonData('transport', Number(e.target.value))}
           />
         </div>
 
@@ -48,8 +57,8 @@ export const CarbonTracker = () => {
           <input
             type="number"
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
-            value={carbonData.energy}
-            onChange={(e) => updateCarbonData('energy', Number(e.target.value) * 0.5)}
+            value={carbonData.energy / 0.5}
+            onChange={(e) => updateCarbonData('energy', Number(e.target.value))}
           />
         </div>
 
@@ -60,8 +69,8 @@ export const CarbonTracker = () => {
           <input
             type="number"
             className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
-            value={carbonData.waste}
-            onChange={(e) => updateCarbonData('waste', Number(e.target.value) * 2.5)}
+            value={carbonData.waste / 2.5}
+            onChange={(e) => updateCarbonData('waste', Number(e.target.value))}
           />
         </div>
 

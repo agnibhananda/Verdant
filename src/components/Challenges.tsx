@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, Droplet, Zap, Recycle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Challenges = () => {
+  const [joinedChallenges, setJoinedChallenges] = useState<string[]>([]);
+
   const challenges = [
     {
+      id: '1',
       icon: Droplet,
       title: 'Water Conservation Week',
       description: 'Reduce your daily water consumption by implementing smart water-saving techniques.',
@@ -13,6 +17,7 @@ const Challenges = () => {
       participants: 1234,
     },
     {
+      id: '2',
       icon: Zap,
       title: 'Energy-Free Evening',
       description: 'Spend one evening per week without using electricity (except essentials).',
@@ -22,6 +27,7 @@ const Challenges = () => {
       participants: 2156,
     },
     {
+      id: '3',
       icon: Recycle,
       title: 'Zero Waste Challenge',
       description: 'Produce zero non-recyclable waste for an entire week. Sustainable Living Transformation ',
@@ -31,6 +37,15 @@ const Challenges = () => {
       participants: 892,
     },
   ];
+
+  const handleJoinChallenge = (challengeId: string) => {
+    setJoinedChallenges(prev => {
+      if (prev.includes(challengeId)) {
+        return prev.filter(id => id !== challengeId);
+      }
+      return [...prev, challengeId];
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -45,8 +60,14 @@ const Challenges = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {challenges.map((challenge) => {
           const Icon = challenge.icon;
+          const isJoined = joinedChallenges.includes(challenge.id);
+
           return (
-            <div key={challenge.title} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <motion.div
+              key={challenge.id}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-eco-accent rounded-lg">
@@ -70,14 +91,21 @@ const Challenges = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Participants:</span>
-                    <span className="font-semibold">{challenge.participants.toLocaleString()}</span>
+                    <span className="font-semibold">{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-              <button className="w-full py-3 bg-eco-primary text-white font-semibold hover:bg-eco-secondary transition-colors" style: "margin-top:auto">
-                Join Challenge
+              <button
+                onClick={() => handleJoinChallenge(challenge.id)}
+                className={`w-full py-3 font-semibold transition-colors ${
+                  isJoined
+                    ? 'bg-eco-secondary text-white hover:bg-eco-primary'
+                    : 'bg-eco-primary text-white hover:bg-eco-secondary'
+                }`}
+              >
+                {isJoined ? 'Leave Challenge' : 'Join Challenge'}
               </button>
-            </div>
+            </motion.div>
           );
         })}
       </div>

@@ -55,60 +55,74 @@ function App() {
             <main className="container mx-auto px-4 py-8">
               <AnimatePresence mode="wait">
                 <Routes>
-                  <Route path="/" element={
-                    <motion.div
-                      key="dashboard"
-                      variants={pageVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <Dashboard />
-                    </motion.div>
-                  } />
-                  <Route path="/challenges" element={
-                    <motion.div
-                      key="challenges"
-                      variants={pageVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <Challenges />
-                    </motion.div>
-                  } />
-                  <Route path="/community" element={
-                    <motion.div
-                      key="community"
-                      variants={pageVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <Community />
-                    </motion.div>
-                  } />
-                  <Route path="/profile" element={
-                    <motion.div
-                      key="profile"
-                      variants={pageVariants}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <Profile />
-                    </motion.div>
-                  } />
+                  <Route
+                    path="/"
+                    element={
+                      <motion.div
+                        key="dashboard"
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
+                        <Dashboard />
+                      </motion.div>
+                    }
+                  />
+                  <Route
+                    path="/challenges"
+                    element={
+                      <motion.div
+                        key="challenges"
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
+                        <Challenges />
+                      </motion.div>
+                    }
+                  />
+                  <Route
+                    path="/community"
+                    element={
+                      <motion.div
+                        key="community"
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
+                        <Community />
+                      </motion.div>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <motion.div
+                        key="profile"
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
+                        <Profile />
+                      </motion.div>
+                    }
+                  />
                 </Routes>
               </AnimatePresence>
             </main>
 
-        <footer className="bg-eco-primary text-white py-6 mt-auto">
-          <div className="container mx-auto px-4 text-center">
-            <p>© 2025 Verdant. Making the world greener, one challenge at a time.</p>
-          </div>
-        </footer>
-      </div>
+            <footer className="bg-eco-primary text-white py-6 mt-auto">
+              <div className="container mx-auto px-4 text-center">
+                <p>© 2025 Verdant. Making the world greener, one challenge at a time.</p>
+              </div>
+            </footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Router>
   );
 }
