@@ -74,7 +74,7 @@ const Challenges = () => {
                   </div>
                 </div>
               </div>
-              <button className="w-full py-3 bg-eco-primary text-white font-semibold hover:bg-eco-secondary transition-colors">
+              <button className="w-full py-3 bg-eco-primary text-white font-semibold hover:bg-eco-secondary transition-colors" style: "margin-top:auto">
                 Join Challenge
               </button>
             </div>
