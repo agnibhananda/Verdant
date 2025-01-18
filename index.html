@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoChallenge Champions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/src/style.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="min-h-screen bg-eco-background">
+    <header class="bg-eco-primary text-white p-4">
+      <div class="container mx-auto flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="leaf" class="h-8 w-8"></i>
+          <h1 class="text-2xl font-bold">EcoChallenge Champions</h1>
+        </div>
+        <nav class="flex items-center space-x-6">
+          <a href="#dashboard" class="nav-link active" data-page="dashboard">
+            <i data-lucide="home" class="h-5 w-5"></i>
+            <span>Dashboard</span>
+          </a>
+          <a href="#challenges" class="nav-link" data-page="challenges">
+            <i data-lucide="award" class="h-5 w-5"></i>
+            <span>Challenges</span>
+          </a>
+          <a href="#community" class="nav-link" data-page="community">
+            <i data-lucide="users" class="h-5 w-5"></i>
+            <span>Community</span>
+          </a>
+          <a href="#profile" class="nav-link" data-page="profile">
+            <i data-lucide="user" class="h-5 w-5"></i>
+            <span>Profile</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <div id="dashboard" class="page active"></div>
+      <div id="challenges" class="page"></div>
+      <div id="community" class="page"></div>
+      <div id="profile" class="page"></div>
+    </main>
+
+    <footer class="bg-eco-primary text-white py-6 mt-auto">
+      <div class="container mx-auto px-4 text-center">
+        <p>© 2024 EcoChallenge Champions. Making the world greener, one challenge at a time.</p>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

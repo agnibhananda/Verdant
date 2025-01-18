@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.nav-link {
+  @apply flex items-center space-x-2 hover:text-eco-accent transition-colors;
+}
+
+.nav-link.active {
+  @apply text-eco-accent;
+}
+
+.challenge-card {
+  @apply bg-white rounded-lg shadow-md overflow-hidden;
+}
+
+.challenge-card-header {
+  @apply p-6;
+}
+
+.challenge-card-icon {
+  @apply p-2 bg-eco-accent rounded-lg;
+}
+
+.challenge-card-title {
+  @apply text-xl font-bold text-eco-primary;
+}
+
+.challenge-card-description {
+  @apply text-gray-600 mb-4;
+}
+
+.challenge-card-stats {
+  @apply space-y-2;
+}
+
+.challenge-card-button {
+  @apply w-full py-3 bg-eco-primary text-white font-semibold hover:bg-eco-secondary transition-colors;
+}
+
+.stat-card {
+  @apply bg-white p-6 rounded-lg shadow-md;
+}
+
+.forum-card {
+  @apply bg-white rounded-lg shadow-md p-6;
+}
+
+.profile-card {
+  @apply bg-white rounded-lg shadow-md p-8;
+}
