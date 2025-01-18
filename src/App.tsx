@@ -1,154 +1,322 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import Navigation from './components/Navigation';
-import Dashboard from './components/Dashboard';
-import Challenges from './components/Challenges';
-import Community from './components/Community';
-import Profile from './components/Profile';
-import { LoadingScreen } from './components/LoadingScreen';
-import { Onboarding } from './components/Onboarding';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Car, Home, ShoppingBag, ArrowRight, ArrowLeft, Check, X, Database, Lightbulb } from 'lucide-react';
+import { Player } from '@lottiefiles/react-lottie-player';
 
-function App() {
-  const [loading, setLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(true);
-
-  useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => setLoading(false), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleOnboardingComplete = (data: any) => {
-    // Here you would typically save the onboarding data
-    console.log('Onboarding completed:', data);
-    setShowOnboarding(false);
-  };
-
-  const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-  };
-
-  const pageVariants = {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 20 }
-  };
-
-  return (
-    <Router>
-      <AnimatePresence>
-        {loading ? (
-          <LoadingScreen />
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="min-h-screen bg-eco-background"
-          >
-            {showOnboarding ? (
-              <Onboarding
-                onComplete={handleOnboardingComplete}
-                onSkip={handleOnboardingSkip}
-              />
-            ) : (
-              <>
-                <motion.header
-                  initial={{ y: -50 }}
-                  animate={{ y: 0 }}
-                  className="bg-eco-primary text-white p-4 sticky top-0 z-10"
-                >
-                  <div className="container mx-auto flex items-center justify-between">
-                    <motion.div
-                      className="flex items-center space-x-2"
-                      whileHover={{ scale: 1.05 }}
-                    >
-                      <a href="/">
-                        <img src="/logo.png" alt="Verdant Logo" className="h-8 w-8" />
-                      </a>
-                      <a href="/">
-                        <h1 className="text-2xl font-bold">Verdant</h1>
-                      </a>
-                    </motion.div>
-                    <Navigation />
-                  </div>
-                </motion.header>
-
-                <main className="container mx-auto px-4 py-8">
-                  <AnimatePresence mode="wait">
-                    <Routes>
-                      <Route
-                        path="/"
-                        element={
-                          <motion.div
-                            key="dashboard"
-                            variants={pageVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                          >
-                            <Dashboard />
-                          </motion.div>
-                        }
-                      />
-                      <Route
-                        path="/challenges"
-                        element={
-                          <motion.div
-                            key="challenges"
-                            variants={pageVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                          >
-                            <Challenges />
-                          </motion.div>
-                        }
-                      />
-                      <Route
-                        path="/community"
-                        element={
-                          <motion.div
-                            key="community"
-                            variants={pageVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                          >
-                            <Community />
-                          </motion.div>
-                        }
-                      />
-                      <Route
-                        path="/profile"
-                        element={
-                          <motion.div
-                            key="profile"
-                            variants={pageVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                          >
-                            <Profile />
-                          </motion.div>
-                        }
-                      />
-                    </Routes>
-                  </AnimatePresence>
-                </main>
-
-                <footer className="bg-eco-primary text-white py-6 mt-auto">
-                  <div className="container mx-auto px-4 text-center">
-                    <p>© 2025 Verdant. Making the world greener, one challenge at a time.</p>
-                  </div>
-                </footer>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Router>
-  );
+interface OnboardingProps {
+  onComplete: (data: any) => void;
+  onSkip: () => void;
 }
 
-export default App;
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) => {
+  const [step, setStep] = useState(0);
+  const [formData, setFormData] = useState({
+    name: '',
+    transport: {
+      car: false,
+      publicTransport: false,
+      bike: false,
+      walk: false
+    },
+    home: {
+      houseType: '',
+      occupants: '1', // Changed to string to handle input value properly
+      renewable: false
+    },
+    consumption: {
+      meatConsumption: 'medium',
+      shopping: 'medium',
+      recycling: false
+    },
+    dataSources: {
+      smartHome: false,
+      fitnessTacker: false,
+      smartCar: false
+    }
+  });
+
+  const steps = [
+    {
+      title: "Welcome to Verdant",
+      description: "Let's create your personalized sustainability journey",
+      icon: Lightbulb,
+      type: 'welcome'
+    },
+    {
+      title: "Transportation Habits",
+      description: "How do you usually get around?",
+      icon: Car,
+      type: 'transport'
+    },
+    {
+      title: "Home & Energy",
+      description: "Tell us about your living situation",
+      icon: Home,
+      type: 'home'
+    },
+    {
+      title: "Consumption Patterns",
+      description: "Let's understand your daily habits",
+      icon: ShoppingBag,
+      type: 'consumption'
+    },
+    {
+      title: "Connect Data Sources",
+      description: "Enhance your experience with smart tracking",
+      icon: Database,
+      type: 'dataSources'
+    }
+  ];
+
+  const handleNext = () => {
+    if (step === steps.length - 1) {
+      // Convert occupants back to number before submitting
+      const submissionData = {
+        ...formData,
+        home: {
+          ...formData.home,
+          occupants: parseInt(formData.home.occupants, 10)
+        }
+      };
+      onComplete(submissionData);
+    } else {
+      setStep(step + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+  };
+
+  const handleOccupantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow positive numbers
+    if (value === '' || parseInt(value, 10) > 0) {
+      setFormData(prev => ({
+        ...prev,
+        home: { ...prev.home, occupants: value }
+      }));
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (steps[step].type) {
+      case 'welcome':
+        return (
+          <div className="text-center space-y-6">
+            <img src="/logo.png" alt="Verdant Logo" className="w-24 h-24 mx-auto" />
+            <h2 className="text-2xl font-bold text-eco-primary">Welcome to Verdant</h2>
+            <p className="text-gray-600">
+              Join our community of eco-conscious individuals making a difference.
+              Let's start by understanding your current lifestyle.
+            </p>
+          </div>
+        );
+
+      case 'transport':
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(formData.transport).map(([key, value]) => (
+                <button
+                  key={key}
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    transport: { ...prev.transport, [key]: !value }
+                  }))}
+                  className={`p-4 rounded-lg border-2 transition-colors ${
+                    value ? 'border-eco-primary bg-eco-accent' : 'border-gray-200'
+                  }`}
+                >
+                  <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'home':
+        return (
+          <div className="space-y-4">
+            <select
+              value={formData.home.houseType}
+              onChange={(e) => setFormData(prev => ({
+                ...prev,
+                home: { ...prev.home, houseType: e.target.value }
+              }))}
+              className="w-full p-2 border-2 rounded-lg"
+            >
+              <option value="">Select house type</option>
+              <option value="apartment">Apartment</option>
+              <option value="house">House</option>
+              <option value="condo">Condo</option>
+            </select>
+            <div className="flex items-center justify-between">
+              <span>Number of occupants:</span>
+              <input
+                type="number"
+                min="1"
+                value={formData.home.occupants}
+                onChange={handleOccupantsChange}
+                className="w-20 p-2 border-2 rounded-lg"
+              />
+            </div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.home.renewable}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  home: { ...prev.home, renewable: e.target.checked }
+                }))}
+              />
+              <span>I use renewable energy</span>
+            </label>
+          </div>
+        );
+
+      case 'consumption':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block">Meat consumption:</label>
+              <select
+                value={formData.consumption.meatConsumption}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, meatConsumption: e.target.value }
+                }))}
+                className="w-full p-2 border-2 rounded-lg"
+              >
+                <option value="low">Low (0-2 times/week)</option>
+                <option value="medium">Medium (3-5 times/week)</option>
+                <option value="high">High (6+ times/week)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="block">Shopping frequency:</label>
+              <select
+                value={formData.consumption.shopping}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, shopping: e.target.value }
+                }))}
+                className="w-full p-2 border-2 rounded-lg"
+              >
+                <option value="low">Low (essential only)</option>
+                <option value="medium">Medium (occasional)</option>
+                <option value="high">High (frequent)</option>
+              </select>
+            </div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.consumption.recycling}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  consumption: { ...prev.consumption, recycling: e.target.checked }
+                }))}
+              />
+              <span>I regularly recycle</span>
+            </label>
+          </div>
+        );
+
+      case 'dataSources':
+        return (
+          <div className="space-y-4">
+            {Object.entries(formData.dataSources).map(([key, value]) => (
+              <label key={key} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={value}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    dataSources: { ...prev.dataSources, [key]: e.target.checked }
+                  }))}
+                />
+                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+              </label>
+            ))}
+            <p className="text-sm text-gray-600 mt-2">
+              Connecting data sources helps us provide more accurate recommendations
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const StepIcon = steps[step].icon;
+
+  return (
+    <div className="fixed inset-0 bg-eco-background flex items-center justify-center p-4 z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 bg-eco-accent rounded-lg">
+              <StepIcon className="h-6 w-6 text-eco-primary" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-eco-primary">{steps[step].title}</h3>
+              <p className="text-sm text-gray-600">{steps[step].description}</p>
+            </div>
+          </div>
+          {step > 0 && (
+            <button
+              onClick={onSkip}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="mb-8">
+          {renderStepContent()}
+        </div>
+
+        <div className="flex justify-between items-center">
+          <div className="flex space-x-1">
+            {steps.map((_, index) => (
+              <div
+                key={index}
+                className={`h-1 w-8 rounded-full ${
+                  index === step ? 'bg-eco-primary' : 'bg-gray-200'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="flex space-x-4">
+            {step > 0 && (
+              <button
+                onClick={handleBack}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back</span>
+              </button>
+            )}
+            <button
+              onClick={handleNext}
+              className="flex items-center space-x-2 bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
+            >
+              <span>{step === steps.length - 1 ? 'Complete' : 'Next'}</span>
+              {step === steps.length - 1 ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <ArrowRight className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
