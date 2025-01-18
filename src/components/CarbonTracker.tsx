@@ -1,8 +1,16 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { LineChart, BarChart2, Wind, Trash2 } from 'lucide-react';
+import { LineChart, Wind, Trash2, Info, HelpCircle } from 'lucide-react';
+import { Chart } from './DataVisualization';
+import { useInView } from 'react-intersection-observer';
 
 export const CarbonTracker = () => {
+  const [ref, inView] = useInView({
+    triggerOnce: true,
+    threshold: 0.1
+  });
+
+  const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const [carbonData, setCarbonData] = useState({
     transport: 0,
     energy: 0,
@@ -21,7 +29,10 @@ export const CarbonTracker = () => {
         date.setDate(date.getDate() - i);
         return {
           date: date.toLocaleDateString(),
-          value: Math.random() * 10 + 5
+          value: Math.random() * 10 + 5,
+          transport: Math.random() * 4 + 2,
+          energy: Math.random() * 3 + 1,
+          waste: Math.random() * 3 + 2
         };
       }).reverse();
       
@@ -37,9 +48,9 @@ export const CarbonTracker = () => {
   const updateCarbonData = (category: keyof typeof carbonData, value: number) => {
     setCarbonData(prev => {
       const multipliers = {
-        transport: 0.2,
-        energy: 0.5,
-        waste: 2.5
+        transport: 0.2, // kg CO₂ per km
+        energy: 0.5,   // kg CO₂ per kWh
+        waste: 2.5     // kg CO₂ per kg waste
       };
       
       const newValue = value * (multipliers[category as keyof typeof multipliers] || 1);
@@ -55,135 +66,193 @@ export const CarbonTracker = () => {
   };
 
   const getEmissionLevel = (total: number) => {
-    if (total < 5) return { text: 'Low Impact', color: 'text-green-500' };
-    if (total < 10) return { text: 'Moderate Impact', color: 'text-yellow-500' };
-    return { text: 'High Impact', color: 'text-red-500' };
+    if (total < 5) return { text: 'Low Impact', color: 'text-green-500', description: 'Great job! Your carbon footprint is below average.' };
+    if (total < 10) return { text: 'Moderate Impact', color: 'text-yellow-500', description: 'You\'re doing okay, but there\'s room for improvement.' };
+    return { text: 'High Impact', color: 'text-red-500', description: 'Consider taking steps to reduce your carbon footprint.' };
+  };
+
+  const tooltips = {
+    transport: "Transportation emissions come from vehicles. Walking, cycling, or using public transport can help reduce this!",
+    energy: "Energy emissions come from electricity usage. Try using energy-efficient appliances and turning off unused devices.",
+    waste: "Waste emissions come from garbage decomposition. Recycling and composting can help reduce this!"
   };
 
   const emissionStatus = getEmissionLevel(carbonData.total);
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       className="bg-white rounded-lg shadow-md p-6"
     >
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-eco-primary">Carbon Footprint Tracker</h3>
-        <div className="flex space-x-2">
-          {['daily', 'weekly', 'monthly'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1 rounded-full text-sm ${
-                activeTab === tab
-                  ? 'bg-eco-primary text-white'
-                  : 'bg-eco-background text-eco-primary'
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        <div>
+          <h3 className="text-xl font-bold text-eco-primary">Carbon Footprint Tracker</h3>
+          <p className="text-sm text-gray-600 mt-1">Track and understand your environmental impact</p>
         </div>
+        <button
+          onClick={() => setShowTooltip(showTooltip ? null : 'main')}
+          className="text-eco-primary hover:text-eco-secondary transition-colors"
+        >
+          <HelpCircle className="h-5 w-5" />
+        </button>
       </div>
+
+      {showTooltip === 'main' && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-eco-background p-4 rounded-lg mb-4"
+        >
+          <h4 className="font-semibold text-eco-primary mb-2">Understanding Your Carbon Footprint</h4>
+          <p className="text-sm text-gray-600">
+            Your carbon footprint is the total amount of greenhouse gases produced by your daily activities.
+            Track your transportation, energy use, and waste to see your environmental impact.
+          </p>
+        </motion.div>
+      )}
       
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-eco-background p-4 rounded-lg"
-          >
-            <div className="flex items-center space-x-2 mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-eco-background p-4 rounded-lg relative"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
               <Wind className="h-5 w-5 text-eco-primary" />
               <span className="text-sm font-medium">Transport</span>
             </div>
-            <p className="text-2xl font-bold text-eco-primary">
-              {carbonData.transport.toFixed(1)} kg
-            </p>
-          </motion.div>
+            <button
+              onClick={() => setShowTooltip(showTooltip === 'transport' ? null : 'transport')}
+              className="text-eco-primary hover:text-eco-secondary"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
+          {showTooltip === 'transport' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute z-10 bg-white p-3 rounded-lg shadow-lg text-sm -right-2 top-12 w-64"
+            >
+              {tooltips.transport}
+            </motion.div>
+          )}
+          <div>
+            <input
+              type="number"
+              className="w-full bg-white rounded-md border-gray-300 focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50 mb-2"
+              value={carbonData.transport / 0.2}
+              onChange={(e) => updateCarbonData('transport', Number(e.target.value))}
+              placeholder="Enter km traveled"
+            />
+            <p className="text-xs text-gray-500">CO₂: {carbonData.transport.toFixed(1)} kg</p>
+          </div>
+        </motion.div>
 
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-eco-background p-4 rounded-lg"
-          >
-            <div className="flex items-center space-x-2 mb-2">
-              <BarChart2 className="h-5 w-5 text-eco-primary" />
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-eco-background p-4 rounded-lg relative"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              <LineChart className="h-5 w-5 text-eco-primary" />
               <span className="text-sm font-medium">Energy</span>
             </div>
-            <p className="text-2xl font-bold text-eco-primary">
-              {carbonData.energy.toFixed(1)} kg
-            </p>
-          </motion.div>
+            <button
+              onClick={() => setShowTooltip(showTooltip === 'energy' ? null : 'energy')}
+              className="text-eco-primary hover:text-eco-secondary"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </div>
+          {showTooltip === 'energy' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute z-10 bg-white p-3 rounded-lg shadow-lg text-sm -right-2 top-12 w-64"
+            >
+              {tooltips.energy}
+            </motion.div>
+          )}
+          <div>
+            <input
+              type="number"
+              className="w-full bg-white rounded-md border-gray-300 focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50 mb-2"
+              value={carbonData.energy / 0.5}
+              onChange={(e) => updateCarbonData('energy', Number(e.target.value))}
+              placeholder="Enter kWh used"
+            />
+            <p className="text-xs text-gray-500">CO₂: {carbonData.energy.toFixed(1)} kg</p>
+          </div>
+        </motion.div>
 
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-eco-background p-4 rounded-lg"
-          >
-            <div className="flex items-center space-x-2 mb-2">
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-eco-background p-4 rounded-lg relative"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
               <Trash2 className="h-5 w-5 text-eco-primary" />
               <span className="text-sm font-medium">Waste</span>
             </div>
-            <p className="text-2xl font-bold text-eco-primary">
-              {carbonData.waste.toFixed(1)} kg
-            </p>
-          </motion.div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Transportation (km/day)
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
-              value={carbonData.transport / 0.2}
-              onChange={(e) => updateCarbonData('transport', Number(e.target.value))}
-            />
+            <button
+              onClick={() => setShowTooltip(showTooltip === 'waste' ? null : 'waste')}
+              className="text-eco-primary hover:text-eco-secondary"
+            >
+              <Info className="h-4 w-4" />
+            </button>
           </div>
-
+          {showTooltip === 'waste' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute z-10 bg-white p-3 rounded-lg shadow-lg text-sm -right-2 top-12 w-64"
+            >
+              {tooltips.waste}
+            </motion.div>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Energy Usage (kWh/day)
-            </label>
             <input
               type="number"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
-              value={carbonData.energy / 0.5}
-              onChange={(e) => updateCarbonData('energy', Number(e.target.value))}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Waste (kg/day)
-            </label>
-            <input
-              type="number"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50"
+              className="w-full bg-white rounded-md border-gray-300 focus:border-eco-primary focus:ring focus:ring-eco-accent focus:ring-opacity-50 mb-2"
               value={carbonData.waste / 2.5}
               onChange={(e) => updateCarbonData('waste', Number(e.target.value))}
+              placeholder="Enter kg of waste"
             />
+            <p className="text-xs text-gray-500">CO₂: {carbonData.waste.toFixed(1)} kg</p>
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        <motion.div
-          className="mt-6 p-4 bg-eco-background rounded-lg"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-lg font-semibold text-eco-primary">
-              Total Carbon Footprint:
+      <motion.div
+        className="bg-eco-background p-6 rounded-lg mb-6"
+        whileHover={{ scale: 1.01 }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h4 className="text-lg font-semibold text-eco-primary">
+              Total Carbon Footprint
+            </h4>
+            <p className="text-sm text-gray-600">
+              Your estimated daily carbon dioxide emissions
             </p>
-            <span className={`text-sm font-medium ${emissionStatus.color}`}>
-              {emissionStatus.text}
-            </span>
           </div>
-          <p className="text-3xl font-bold text-eco-primary">
-            {carbonData.total.toFixed(2)} kg CO₂
-          </p>
+          <span className={`text-sm font-medium ${emissionStatus.color}`}>
+            {emissionStatus.text}
+          </span>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-end space-x-2">
+            <span className="text-3xl font-bold text-eco-primary">
+              {carbonData.total.toFixed(2)}
+            </span>
+            <span className="text-lg text-gray-600 mb-1">kg CO₂</span>
+          </div>
           
-          <div className="mt-4">
+          <div className="relative pt-1">
             <div className="h-2 bg-gray-200 rounded-full">
               <motion.div
                 className="h-full rounded-full bg-eco-secondary"
@@ -193,36 +262,40 @@ export const CarbonTracker = () => {
               />
             </div>
           </div>
-        </motion.div>
 
-        <div className="mt-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-4">Historical Trends</h4>
-          <div className="h-40 relative">
-            {carbonData.history.map((data, index) => (
-              <motion.div
-                key={data.date}
-                className="absolute bottom-0"
-                style={{
-                  left: `${(index / (carbonData.history.length - 1)) * 100}%`,
-                  height: `${(data.value / 15) * 100}%`,
-                  width: '20px',
-                  transform: 'translateX(-50%)'
-                }}
-                initial={{ height: 0 }}
-                animate={{ height: `${(data.value / 15) * 100}%` }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+          <p className="text-sm text-gray-600">
+            {emissionStatus.description}
+          </p>
+        </div>
+      </motion.div>
+
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h4 className="text-lg font-semibold text-eco-primary">Emission Trends</h4>
+          <div className="flex space-x-2">
+            {['daily', 'weekly', 'monthly'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  activeTab === tab
+                    ? 'bg-eco-primary text-white'
+                    : 'bg-eco-background text-eco-primary'
+                }`}
               >
-                <div
-                  className="w-full bg-eco-secondary rounded-t-lg"
-                  style={{ height: '100%' }}
-                />
-                <p className="text-xs text-gray-600 mt-2 transform -rotate-45 origin-top-left">
-                  {data.date}
-                </p>
-              </motion.div>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
             ))}
           </div>
         </div>
+
+        <Chart
+          data={carbonData.history}
+          type="line"
+          dataKey="value"
+          xAxisKey="date"
+          title="Carbon Emissions Over Time"
+        />
       </div>
     </motion.div>
   );
