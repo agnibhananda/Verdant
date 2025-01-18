@@ -45,12 +45,12 @@ function App() {
                   className="flex items-center space-x-2"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <div> 
                     <a href="/">
                   <img src="/logo.png" alt="Verdant Logo" className="h-8 w-8" />
+                       
                   <h1 className="text-2xl font-bold">Verdant</h1>
                       </a>
-                    </div>
+                     
                 </motion.div>
                 <Navigation />
               </div>
