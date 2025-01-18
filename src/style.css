@@ -44,6 +44,7 @@
 
 .challenge-card-button {
   @apply w-full py-3 bg-eco-primary text-white font-semibold hover:bg-eco-secondary transition-colors;
+  
 }
 
 .stat-card {
