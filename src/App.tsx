@@ -46,7 +46,7 @@ function App() {
                   whileHover={{ scale: 1.05 }}
                 >
                   <Leaf className="h-8 w-8" />
-                  <h1 className="text-2xl font-bold">EcoChallenge Champions</h1>
+                  <h1 className="text-2xl font-bold">Verdant</h1>
                 </motion.div>
                 <Navigation />
               </div>
