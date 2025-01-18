@@ -11,12 +11,7 @@ export const LoadingScreen = () => {
     >
       <div className="text-center">
         <img src="/logo.png" alt="Verdant Logo" className="h-32 w-32 mx-auto mb-4" />
-        <Player
-          autoplay
-          loop
-          src="https://lottie.host/32a3fdc0-7a92-457c-9395-527848738b30/0xiABVJ9Yl.json"
-          style={{ height: '200px', width: '200px' }}
-        />
+        
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
