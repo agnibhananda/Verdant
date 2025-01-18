@@ -47,9 +47,11 @@ function App() {
                 >
                     <a href="/">
                   <img src="/logo.png" alt="Verdant Logo" className="h-8 w-8" />
-                       
+                                             </a> 
+                  <a href="/">
                   <h1 className="text-2xl font-bold">Verdant</h1>
-                      </a>
+                                                 </a> 
+
                      
                 </motion.div>
                 <Navigation />
