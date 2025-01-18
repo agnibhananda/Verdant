@@ -77,9 +77,9 @@ function App() {
             <motion.header
               initial={{ y: -50 }}
               animate={{ y: 0 }}
-              className="bg-eco-primary text-white p-4 sticky top-0 z-10"
+              className="bg-eco-primary text-white p-4 sticky top-0 z-50"
             >
-              <div className="container mx-auto flex items-center justify-between">
+              <div className="container mx-auto flex items-center justify-between px-4">
                 <motion.div
                   className="flex items-center space-x-2"
                   whileHover={{ scale: 1.05 }}
@@ -88,14 +88,14 @@ function App() {
                     <img src="/logo.png" alt="Verdant Logo" className="h-8 w-8" />
                   </a>
                   <a href="/">
-                    <h1 className="text-2xl font-bold">Verdant</h1>
+                    <h1 className="text-xl md:text-2xl font-bold">Verdant</h1>
                   </a>
                 </motion.div>
                 <Navigation />
               </div>
             </motion.header>
 
-            <main className="container mx-auto px-4 py-8">
+            <main className="container mx-auto px-4 py-4 md:py-8">
               <AnimatePresence mode="wait">
                 <Routes>
                   <Route
@@ -158,8 +158,8 @@ function App() {
               </AnimatePresence>
             </main>
 
-            <footer className="bg-eco-primary text-white py-6 mt-auto">
-              <div className="container mx-auto px-4 text-center">
+            <footer className="bg-eco-primary text-white py-4 md:py-6 mt-auto">
+              <div className="container mx-auto px-4 text-center text-sm md:text-base">
                 <p>© 2025 Verdant. Making the world greener, one challenge at a time.</p>
               </div>
             </footer>
