@@ -20,96 +20,30 @@ function App() {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        checkOnboardingStatus(session.user.id);
-      }
       setLoading(false);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        await checkOnboardingStatus(session.user.id);
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkOnboardingStatus = async (userId: string) => {
-    try {
-      // First, check if the user has preferences
-      const { data: existingPrefs, error: selectError } = await supabase
-        .from('user_preferences')
-        .select('onboarding_completed')
-        .eq('user_id', userId)
-        .single();
-
-      if (selectError && selectError.code !== 'PGRST116') {
-        throw selectError;
-      }
-
-      // If no preferences exist, create them
-      if (!existingPrefs) {
-        const { error: insertError } = await supabase
-          .from('user_preferences')
-          .insert([
-            { 
-              user_id: userId, 
-              onboarding_completed: false 
-            }
-          ])
-          .single();
-
-        if (insertError) throw insertError;
-        setShowOnboarding(true);
-      } else {
-        setShowOnboarding(!existingPrefs.onboarding_completed);
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      // Only show onboarding if we can't verify the status
-      setShowOnboarding(true);
-    }
+  const handleAuthSuccess = () => {
+    setShowOnboarding(true);
   };
 
-  const handleAuthSuccess = async (userId: string) => {
-    await checkOnboardingStatus(userId);
+  const handleOnboardingComplete = (data: any) => {
+    console.log('Onboarding completed:', data);
+    setShowOnboarding(false);
   };
 
-  const handleOnboardingComplete = async (data: any) => {
-    if (!session?.user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_preferences')
-        .update({ onboarding_completed: true })
-        .eq('user_id', session.user.id);
-
-      if (error) throw error;
-      setShowOnboarding(false);
-    } catch (error) {
-      console.error('Error updating onboarding status:', error);
-    }
-  };
-
-  const handleOnboardingSkip = async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_preferences')
-        .update({ onboarding_completed: true })
-        .eq('user_id', session.user.id);
-
-      if (error) throw error;
-      setShowOnboarding(false);
-    } catch (error) {
-      console.error('Error updating onboarding status:', error);
-    }
+  const handleOnboardingSkip = () => {
+    setShowOnboarding(false);
   };
 
   const pageVariants = {

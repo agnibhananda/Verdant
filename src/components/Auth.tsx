@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, User, AlertCircle } from 'lucide-react';
 
 interface AuthProps {
-  onAuthSuccess: (userId: string) => void;
+  onAuthSuccess: () => void;
 }
 
 export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
@@ -22,16 +22,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        if (data?.user) {
-          onAuthSuccess(data.user.id);
-        }
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -41,12 +38,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           },
         });
         if (error) throw error;
-        if (data?.user) {
-          onAuthSuccess(data.user.id);
-        }
       }
+      onAuthSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
       setLoading(false);
     }
   };
