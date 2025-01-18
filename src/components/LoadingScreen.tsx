@@ -22,7 +22,7 @@ export const LoadingScreen = () => {
           transition={{ delay: 0.2 }}
           className="text-eco-primary text-xl font-semibold mt-4"
         >
-          Loading your eco-journey...
+          Loading Verdant...
         </motion.p>
       </div>
     </motion.div>
