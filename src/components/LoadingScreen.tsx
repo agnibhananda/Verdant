@@ -10,6 +10,7 @@ export const LoadingScreen = () => {
       className="fixed inset-0 bg-eco-background z-50 flex items-center justify-center"
     >
       <div className="text-center">
+        <img src="/logo.png" alt="Verdant Logo" className="h-32 w-32 mx-auto mb-4" />
         <Player
           autoplay
           loop

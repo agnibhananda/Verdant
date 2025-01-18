@@ -7,7 +7,7 @@ import Challenges from './components/Challenges';
 import Community from './components/Community';
 import Profile from './components/Profile';
 import { LoadingScreen } from './components/LoadingScreen';
-import { Leaf } from 'lucide-react';
+import { Image } from 'lucide-react';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ function App() {
                   className="flex items-center space-x-2"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <Leaf className="h-8 w-8" />
+                  <img src="/logo.png" alt="Verdant Logo" className="h-8 w-8" />
                   <h1 className="text-2xl font-bold">Verdant</h1>
                 </motion.div>
                 <Navigation />
