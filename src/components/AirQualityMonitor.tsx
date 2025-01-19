@@ -6,9 +6,8 @@ import { useInView } from 'react-intersection-observer';
 interface AirQualityData {
   location: string;
   city: string;
-  parameter: string;
-  value: number;
-  unit: string;
+  aqi: number;
+  dominantPollutant: string;
   lastUpdated: string;
 }
 
@@ -24,34 +23,27 @@ export const AirQualityMonitor = () => {
   useEffect(() => {
     const fetchAirQuality = async () => {
       try {
-        // Using the specific locations endpoint
-        const locationIds = [8118, 8119, 8120, 8121, 8122]; // Example location IDs
-        const dataPromises = locationIds.map(id => 
-          fetch(`https://api.openaq.org/v3/locations/${id}`, {
-            headers: {
-              'X-API-Key': 'd80e4819a8c713b537e2a96d4941750098b25db2e7aa46e49616932ada8b627c'
-            }
-          }).then(res => res.json())
+        // Using major cities as examples
+        const cities = ['delhi', 'noida', ];
+        const dataPromises = cities.map(city => 
+          fetch(`https://api.waqi.info/feed/${city}/?token=2ddf41378f91f1474516928a64a3650ed2e2fc85`)
+            .then(res => res.json())
         );
 
         const responses = await Promise.all(dataPromises);
         
         const formattedData = responses
-          .filter(data => data && data.results)
-          .map(data => {
-            const result = data.results;
-            const pm25Data = result.parameters?.find(param => param.parameter === 'pm25');
-            
+          .filter(response => response.status === 'ok')
+          .map(response => {
+            const data = response.data;
             return {
-              location: result.name || 'Unknown Location',
-              city: result.city || 'Unknown City',
-              parameter: 'pm25',
-              value: pm25Data ? pm25Data.lastValue : 0,
-              unit: pm25Data ? pm25Data.unit : 'µg/m³',
-              lastUpdated: pm25Data ? new Date(pm25Data.lastUpdatedUTC).toLocaleString() : 'N/A'
+              location: data.city.name,
+              city: data.city.name.split(',')[0],
+              aqi: data.aqi,
+              dominantPollutant: data.dominentpol || 'Unknown',
+              lastUpdated: new Date(data.time.iso).toLocaleString()
             };
-          })
-          .filter(item => item.value > 0);
+          });
 
         if (formattedData.length === 0) {
           throw new Error('No air quality data available');
@@ -69,11 +61,13 @@ export const AirQualityMonitor = () => {
     fetchAirQuality();
   }, []);
 
-  const getAirQualityLevel = (value: number) => {
-    if (value <= 12) return { text: 'Good', color: 'text-green-500' };
-    if (value <= 35.4) return { text: 'Moderate', color: 'text-yellow-500' };
-    if (value <= 55.4) return { text: 'Unhealthy for Sensitive Groups', color: 'text-orange-500' };
-    return { text: 'Unhealthy', color: 'text-red-500' };
+  const getAirQualityLevel = (aqi: number) => {
+    if (aqi <= 50) return { text: 'Good', color: 'text-green-500' };
+    if (aqi <= 100) return { text: 'Moderate', color: 'text-yellow-500' };
+    if (aqi <= 150) return { text: 'Unhealthy for Sensitive Groups', color: 'text-orange-500' };
+    if (aqi <= 200) return { text: 'Unhealthy', color: 'text-red-500' };
+    if (aqi <= 300) return { text: 'Very Unhealthy', color: 'text-purple-500' };
+    return { text: 'Hazardous', color: 'text-rose-700' };
   };
 
   return (
@@ -122,15 +116,19 @@ export const AirQualityMonitor = () => {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{data.city}</p>
                 </div>
-                <span className={`text-sm font-medium ${getAirQualityLevel(data.value).color}`}>
-                  {getAirQualityLevel(data.value).text}
+                <span className={`text-sm font-medium ${getAirQualityLevel(data.aqi).color}`}>
+                  {getAirQualityLevel(data.aqi).text}
                 </span>
               </div>
               
               <div className="mt-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">PM2.5</span>
-                  <span className="font-semibold">{data.value} {data.unit}</span>
+                  <span className="text-sm text-gray-600">Air Quality Index</span>
+                  <span className="font-semibold">{data.aqi}</span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm text-gray-600">Main Pollutant</span>
+                  <span className="font-semibold">{data.dominantPollutant}</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   Last updated: {data.lastUpdated}
