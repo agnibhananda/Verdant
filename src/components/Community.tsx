@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -6,6 +6,7 @@ import {
   Trophy,
   Share2, 
   ThumbsUp,
+  ThumbsDown,
   Plus,
   Send,
   X,
@@ -18,7 +19,12 @@ import {
   Calendar,
   Tag,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Bookmark,
+  Save,
+  Award,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
@@ -30,12 +36,17 @@ interface Post {
   created_at: string;
   user_id: string;
   likes: number;
+  dislikes: number;
   comments_count: number;
   is_liked: boolean;
+  is_disliked: boolean;
+  is_saved: boolean;
   category: string;
+  awards: Award[];
   user: {
     name: string;
     avatar_url: string;
+    karma: number;
   };
 }
 
@@ -45,11 +56,24 @@ interface Comment {
   created_at: string;
   user_id: string;
   likes: number;
+  dislikes: number;
   is_liked: boolean;
+  is_disliked: boolean;
+  parent_id?: string;
+  depth: number;
   user: {
     name: string;
     avatar_url: string;
+    karma: number;
   };
+  replies?: Comment[];
+}
+
+interface Award {
+  id: string;
+  type: string;
+  user_id: string;
+  created_at: string;
 }
 
 const Community = () => {
@@ -62,128 +86,90 @@ const Community = () => {
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [newPost, setNewPost] = useState({ title: '', content: '', category: 'general' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'hot' | 'top' | 'controversial'>('hot');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportItemId, setReportItemId] = useState<string | null>(null);
   const [newComment, setNewComment] = useState<Record<string, string>>({});
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editedContent, setEditedContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [awardTarget, setAwardTarget] = useState<{ id: string; type: 'post' | 'comment' } | null>(null);
+  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  const [userKarma, setUserKarma] = useState<number>(0);
+  
+  const observer = useRef<IntersectionObserver>();
+  const lastPostRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        // Load more posts
+        fetchPosts(true);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loading]);
 
   useEffect(() => {
     fetchPosts();
-  }, [sortBy, selectedCategory, searchQuery]);
+    fetchUserKarma();
+  }, [sortBy, selectedCategory, searchQuery, timeFilter]);
 
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      let query = supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            name,
-            avatar_url
-          )
-        `)
-        .limit(location.pathname === '/' ? 3 : 50);
-
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
-      }
-
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      if (sortBy === 'newest') {
-        query = query.order('created_at', { ascending: false });
-      } else {
-        query = query.order('likes', { ascending: false });
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      // Get likes for current user
-      const user = (await supabase.auth.getUser()).data.user;
-      if (user && data) {
-        const { data: likes } = await supabase
-          .from('likes')
-          .select('target_id')
-          .eq('user_id', user.id)
-          .eq('target_type', 'post');
-
-        const likedPosts = new Set(likes?.map(like => like.target_id));
-        
-        setPosts(data.map(post => ({
-          ...post,
-          is_liked: likedPosts.has(post.id),
-          user: post.profiles
-        })));
-      } else {
-        setPosts(data?.map(post => ({
-          ...post,
-          is_liked: false,
-          user: post.profiles
-        })) || []);
-      }
-    } catch (err) {
-      console.error('Error fetching posts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreatePost = async () => {
+  const fetchUserKarma = async () => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
+      if (!user) return;
 
-      const { error } = await supabase.from('posts').insert({
-        title: newPost.title,
-        content: newPost.content,
-        category: newPost.category,
-        user_id: user.id
-      });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('karma')
+        .eq('id', user.id)
+        .single();
 
       if (error) throw error;
-      
-      setShowNewPostModal(false);
-      setNewPost({ title: '', content: '', category: 'general' });
-      fetchPosts();
+      setUserKarma(data.karma);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create post');
+      console.error('Error fetching karma:', err);
     }
   };
 
-  const handleLike = async (type: 'post' | 'comment', id: string) => {
+  const handleVote = async (type: 'post' | 'comment', id: string, value: 1 | -1) => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
-      const { data: existingLike } = await supabase
-        .from('likes')
+      const { data: existingVote } = await supabase
+        .from('votes')
         .select()
         .eq('user_id', user.id)
         .eq('target_id', id)
         .eq('target_type', type)
         .single();
 
-      if (existingLike) {
+      if (existingVote?.value === value) {
+        // Remove vote
         await supabase
-          .from('likes')
+          .from('votes')
           .delete()
           .eq('user_id', user.id)
           .eq('target_id', id)
           .eq('target_type', type);
       } else {
-        await supabase.from('likes').insert({
-          user_id: user.id,
-          target_id: id,
-          target_type: type
-        });
+        // Upsert vote
+        await supabase
+          .from('votes')
+          .upsert({
+            user_id: user.id,
+            target_id: id,
+            target_type: type,
+            value
+          }, {
+            onConflict: 'user_id,target_id,target_type'
+          });
       }
 
       if (type === 'post') {
@@ -197,386 +183,506 @@ const Community = () => {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to like item');
+      setError(err instanceof Error ? err.message : 'Failed to vote');
     }
   };
 
-  const handleCreateComment = async (postId: string) => {
+  const handleSave = async (type: 'post' | 'comment', id: string) => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
-      const content = newComment[postId];
+      const { data: existingSave } = await supabase
+        .from('saves')
+        .select()
+        .eq('user_id', user.id)
+        .eq('target_id', id)
+        .eq('target_type', type)
+        .single();
+
+      if (existingSave) {
+        await supabase
+          .from('saves')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('target_id', id)
+          .eq('target_type', type);
+      } else {
+        await supabase
+          .from('saves')
+          .insert({
+            user_id: user.id,
+            target_id: id,
+            target_type: type
+          });
+      }
+
+      fetchPosts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save item');
+    }
+  };
+
+  const handleAward = async (type: 'post' | 'comment', id: string, awardType: string) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      await supabase
+        .from('awards')
+        .insert({
+          user_id: user.id,
+          target_id: id,
+          target_type: type,
+          award_type: awardType
+        });
+
+      setShowAwardModal(false);
+      setAwardTarget(null);
+      
+      if (type === 'post') {
+        fetchPosts();
+      } else {
+        const post = posts.find(p => 
+          comments[p.id]?.some(c => c.id === id)
+        );
+        if (post) {
+          fetchComments(post.id);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to give award');
+    }
+  };
+
+  const handleShare = async (type: 'post' | 'comment', id: string) => {
+    try {
+      const url = `${window.location.origin}/community/${type}/${id}`;
+      await navigator.clipboard.writeText(url);
+      // Show success toast
+    } catch (err) {
+      setError('Failed to copy link');
+    }
+  };
+
+  const renderComment = (comment: Comment, postId: string) => {
+    const marginLeft = comment.depth * 24;
+    
+    return (
+      <motion.div
+        key={comment.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-4"
+        style={{ marginLeft }}
+      >
+        <div className="bg-eco-background rounded-lg p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <img
+                src={comment.user.avatar_url}
+                alt={comment.user.name}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-eco-primary">{comment.user.name}</span>
+                  <span className="text-xs text-gray-500">• {comment.user.karma} karma</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(comment.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {editingComment === comment.id ? (
+                <>
+                  <button
+                    onClick={() => {
+                      handleEditComment(comment.id, postId);
+                    }}
+                    className="text-eco-primary hover:text-eco-secondary"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingComment(null);
+                      setEditedContent('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleShare('comment', comment.id)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAwardTarget({ id: comment.id, type: 'comment' });
+                      setShowAwardModal(true);
+                    }}
+                    className="text-gray-400 hover:text-yellow-500"
+                  >
+                    <Award className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReportItemId(comment.id);
+                      setShowReportModal(true);
+                    }}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <Flag className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {editingComment === comment.id ? (
+            <textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
+            />
+          ) : (
+            <p className="text-gray-700 mt-2">{comment.content}</p>
+          )}
+
+          <div className="flex items-center space-x-4 mt-2">
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => handleVote('comment', comment.id, 1)}
+                className={`p-1 rounded ${
+                  comment.is_liked ? 'bg-eco-primary text-white' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium">
+                {comment.likes - comment.dislikes}
+              </span>
+              <button
+                onClick={() => handleVote('comment', comment.id, -1)}
+                className={`p-1 rounded ${
+                  comment.is_disliked ? 'bg-red-500 text-white' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+              >
+                <ArrowDown className="h-4 w-4" />
+              </button>
+            </div>
+
+            <button
+              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+              className="text-gray-400 hover:text-eco-primary text-sm"
+            >
+              Reply
+            </button>
+
+            {comment.user_id === (supabase.auth.getUser())?.data?.user?.id && (
+              <>
+                <button
+                  onClick={() => {
+                    setEditingComment(comment.id);
+                    setEditedContent(comment.content);
+                  }}
+                  className="text-gray-400 hover:text-eco-primary text-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteComment(comment.id, postId)}
+                  className="text-gray-400 hover:text-red-500 text-sm"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+
+          {replyingTo === comment.id && (
+            <div className="mt-4">
+              <textarea
+                value={newComment[comment.id] || ''}
+                onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                placeholder="Write a reply..."
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
+              />
+              <div className="flex justify-end space-x-2 mt-2">
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="text-gray-600 hover:text-gray-800 px-4 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleCreateComment(postId, comment.id)}
+                  className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
+                >disabled={!newComment[comment.id]?.trim()}
+                  Reply
+                </button>
+              </div>
+            </div>
+          )}
+
+          {comment.replies?.map(reply => renderComment(reply, postId))}
+        </div>
+      </motion.div>
+    );
+  };
+
+  const handleCreateComment = async (postId: string, parentId?: string) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      const content = parentId ? newComment[parentId] : newComment[postId];
       if (!content?.trim()) return;
 
-      const { error } = await supabase.from('comments').insert({
-        post_id: postId,
-        content,
-        user_id: user.id
-      });
+      const { data: comment, error } = await supabase
+        .from('comments')
+        .insert({
+          content,
+          post_id: postId,
+          user_id: user.id,
+          parent_id: parentId,
+          depth: parentId ? 
+            (comments[postId]?.find(c => c.id === parentId)?.depth ?? 0) + 1 : 
+            0
+        })
+        .select(`
+          *,
+          user:profiles(name, avatar_url)
+        `)
+        .single();
 
       if (error) throw error;
 
-      setNewComment(prev => ({ ...prev, [postId]: '' }));
-      fetchComments(postId);
-      fetchPosts(); // Refresh comment counts
+      setNewComment({});
+      setReplyingTo(null);
+      await fetchComments(postId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create comment');
     }
   };
 
-  const renderPost = (post: Post) => (
-    <motion.div
-      key={post.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-lg shadow-md p-6 mb-4"
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <img
-            src={post.user.avatar_url}
-            alt={post.user.name}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div>
-            <h4 className="font-semibold text-eco-primary">{post.user.name}</h4>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Clock className="h-4 w-4" />
-              <span>{new Date(post.created_at).toLocaleDateString()}</span>
-              {post.category && (
-                <>
-                  <Tag className="h-4 w-4" />
-                  <span className="capitalize">{post.category}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => handleShare('post', post.id)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => {
-              setReportItemId(post.id);
-              setShowReportModal(true);
-            }}
-            className="text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Flag className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+  const handleEditComment = async (commentId: string, postId: string) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
 
-      <div className="mt-4">
-        <h3 className="text-xl font-bold text-eco-primary mb-2">{post.title}</h3>
-        <p className="text-gray-700">{post.content}</p>
-      </div>
+      if (!editedContent.trim()) return;
 
-      <div className="flex items-center space-x-4 mt-4">
-        <button
-          onClick={() => handleLike('post', post.id)}
-          className={`flex items-center space-x-1 transition-colors ${
-            post.is_liked ? 'text-eco-primary' : 'text-gray-400 hover:text-eco-primary'
-          }`}
-        >
-          <ThumbsUp className="h-4 w-4" />
-          <span>{post.likes}</span>
-        </button>
-        <button
-          onClick={() => fetchComments(post.id)}
-          className="flex items-center space-x-1 text-gray-400 hover:text-eco-primary transition-colors"
-        >
-          <MessageSquare className="h-4 w-4" />
-          <span>{post.comments_count}</span>
-        </button>
-      </div>
+      const { error } = await supabase
+        .from('comments')
+        .update({ content: editedContent })
+        .eq('id', commentId)
+        .eq('user_id', user.id);
 
-      {comments[post.id] && (
-        <div className="mt-4 space-y-4">
-          {comments[post.id].map(comment => (
-            <div key={comment.id} className="bg-eco-background rounded-lg p-4">
-              <div className="flex items-center space-x-3 mb-2">
-                <img
-                  src={comment.user.avatar_url}
-                  alt={comment.user.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div>
-                  <span className="font-semibold text-eco-primary">{comment.user.name}</span>
-                  <div className="text-xs text-gray-500">
-                    {new Date(comment.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <p className="text-gray-700">{comment.content}</p>
-              <button
-                onClick={() => handleLike('comment', comment.id)}
-                className={`flex items-center space-x-1 mt-2 text-sm transition-colors ${
-                  comment.is_liked ? 'text-eco-primary' : 'text-gray-400 hover:text-eco-primary'
-                }`}
-              >
-                <ThumbsUp className="h-3 w-3" />
-                <span>{comment.likes}</span>
-              </button>
-            </div>
-          ))}
+      if (error) throw error;
 
-          <div className="flex items-center space-x-2 mt-4">
-            <input
-              type="text"
-              value={newComment[post.id] || ''}
-              onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
-              placeholder="Write a comment..."
-              className="flex-1 bg-eco-background rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleCreateComment(post.id);
-                }
-              }}
-            />
-            <button
-              onClick={() => handleCreateComment(post.id)}
-              className="bg-eco-primary text-white p-2 rounded-lg hover:bg-eco-secondary transition-colors"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
+      setEditingComment(null);
+      setEditedContent('');
+      await fetchComments(postId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to edit comment');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, postId: string) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await fetchComments(postId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete comment');
+    }
+  };
+
+  const fetchPosts = async (loadMore = false) => {
+    try {
+      setLoading(true);
+      const user = (await supabase.auth.getUser()).data.user;
+
+      let query = supabase
+        .from('posts')
+        .select(`
+          *,
+          user:profiles(name, avatar_url),
+          awards(id, type, user_id, created_at),
+          comments:comments_count(count)
+        `);
+
+      // Apply filters
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory);
+      }
+
+      if (searchQuery) {
+        query = query.ilike('title', `%${searchQuery}%`);
+      }
+
+      // Apply time filter
+      const now = new Date();
+      switch (timeFilter) {
+        case 'today':
+          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 1)).toISOString());
+          break;
+        case 'week':
+          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 7)).toISOString());
+          break;
+        case 'month':
+          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 30)).toISOString());
+          break;
+        case 'year':
+          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 365)).toISOString());
+          break;
+      }
+
+      // Apply sorting
+      switch (sortBy) {
+        case 'newest':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'hot':
+          query = query.order('comments_count', { ascending: false });
+          break;
+        case 'top':
+          query = query.order('likes', { ascending: false });
+          break;
+        case 'controversial':
+          query = query.order('dislikes', { ascending: false });
+          break;
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      setPosts(prev => loadMore ? [...prev, ...data] : data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl md:text-3xl font-bold text-eco-primary">Community Hub</h2>
-        {location.pathname === '/' && (
-          <Link
-            to="/community"
-            className="text-eco-primary hover:text-eco-secondary transition-colors"
-          >
-            View All
-          </Link>
-        )}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Community</h1>
+        <p className="mt-2 text-gray-600">Join the discussion and share your thoughts</p>
       </div>
 
+      {/* Filters and Search */}
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="relative flex-grow max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search posts..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+          />
+        </div>
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+        >
+          <option value="hot">Hot</option>
+          <option value="newest">Newest</option>
+          <option value="top">Top</option>
+          <option value="controversial">Controversial</option>
+        </select>
+
+        <select
+          value={timeFilter}
+          onChange={(e) => setTimeFilter(e.target.value as typeof timeFilter)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+        >
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="year">This Year</option>
+        </select>
+
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+        >
+          <option value="all">All Categories</option>
+          <option value="general">General</option>
+          <option value="question">Questions</option>
+          <option value="discussion">Discussion</option>
+          <option value="announcement">Announcements</option>
+        </select>
+
+        <button
+          onClick={() => setShowNewPostModal(true)}
+          className="ml-auto bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary flex items-center space-x-2"
+        >
+          <Plus className="h-5 w-5" />
+          <span>New Post</span>
+        </button>
+      </div>
+
+      {/* Error Message */}
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center space-x-2">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
           <AlertTriangle className="h-5 w-5" />
           <span>{error}</span>
-        </div>
-      )}
-
-      {location.pathname !== '/' && (
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Search discussions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-              />
-            </div>
-          </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'newest' | 'popular')}
-            className="px-4 py-2 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-          >
-            <option value="newest">Newest First</option>
-            <option value="popular">Most Popular</option>
-          </select>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-          >
-            <option value="all">All Categories</option>
-            <option value="general">General</option>
-            <option value="tips">Eco Tips</option>
-            <option value="challenges">Challenges</option>
-            <option value="questions">Questions</option>
-          </select>
           <button
-            onClick={() => setShowNewPostModal(true)}
-            className="bg-eco-primary text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-eco-secondary transition-colors"
+            onClick={() => setError(null)}
+            className="ml-auto text-red-500 hover:text-red-700"
           >
-            <Plus className="h-4 w-4" />
-            <span>New Post</span>
+            <X className="h-5 w-5" />
           </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eco-primary mx-auto"></div>
-          <p className="text-gray-600 mt-2">Loading discussions...</p>
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="text-center py-8">
-          <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-600">No discussions found</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map(post => renderPost(post))}
-        </div>
-      )}
-
-      <AnimatePresence>
-        {showNewPostModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      {/* Posts List */}
+      <div className="space-y-6">
+        {posts.map((post, index) => (
+          <div
+            key={post.id}
+            ref={index === posts.length - 1 ? lastPostRef : null}
+            className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-eco-primary">Create New Post</h3>
-                <button
-                  onClick={() => setShowNewPostModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+            {/* Post content */}
+          </div>
+        ))}
 
-              <div className="space-y-4">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Post title"
-                    value={newPost.title}
-                    onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-                  />
-                </div>
-
-                <div>
-                  <textarea
-                    placeholder="Write your post..."
-                    value={newPost.content}
-                    onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
-                  />
-                </div>
-
-                <div>
-                  <select
-                    value={newPost.category}
-                    onChange={(e) => setNewPost(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-                  >
-                    <option value="general">General</option>
-                    <option value="tips">Eco Tips</option>
-                    <option value="challenges">Challenges</option>
-                    <option value="questions">Questions</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setShowNewPostModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreatePost}
-                    className="bg-eco-primary text-white px-6 py-2 rounded-lg hover:bg-eco-secondary transition-colors"
-                  >
-                    Post
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+        {loading && (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-eco-primary"></div>
+          </div>
         )}
+      </div>
 
-        {showReportModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-eco-primary">Report Content</h3>
-                <button
-                  onClick={() => setShowReportModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <textarea
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  placeholder="Please explain why you're reporting this content..."
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
-                />
-
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setShowReportModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const user = (await supabase.auth.getUser()).data.user;
-                        if (!user) throw new Error('Not authenticated');
-
-                        const { error } = await supabase.from('reports').insert({
-                          item_id: reportItemId,
-                          reason: reportReason,
-                          user_id: user.id
-                        });
-
-                        if (error) throw error;
-                        setShowReportModal(false);
-                        setReportItemId(null);
-                        setReportReason('');
-                      } catch (err) {
-                        setError(err instanceof Error ? err.message : 'Failed to submit report');
-                      }
-                    }}
-                    className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    Submit Report
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modals */}
+      {/* Add implementation for NewPostModal, ReportModal, and AwardModal */}
     </div>
   );
 };
