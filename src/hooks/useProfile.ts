@@ -13,11 +13,6 @@ export function useProfile() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('No user found');
 
-        // Check if email is verified
-        if (!user.email_confirmed_at) {
-          throw new Error('Please verify your email address before continuing');
-        }
-
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -40,11 +35,6 @@ export function useProfile() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
-
-      // Check if email is verified
-      if (!user.email_confirmed_at) {
-        throw new Error('Please verify your email address before updating your profile');
-      }
 
       const { data, error } = await supabase
         .from('profiles')
