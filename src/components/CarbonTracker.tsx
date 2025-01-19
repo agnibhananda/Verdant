@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { LineChart, Wind, Trash2, Info, HelpCircle } from 'lucide-react';
-import { Chart } from './DataVisualization';
 import { useInView } from 'react-intersection-observer';
+import { PlotlyChart } from './PlotlyChart';
 
 export const CarbonTracker = () => {
   const [ref, inView] = useInView({
@@ -15,8 +15,7 @@ export const CarbonTracker = () => {
     transport: 0,
     energy: 0,
     waste: 0,
-    total: 0,
-    history: [] as { date: string; value: number }[]
+    total: 0
   });
 
   const [inputValues, setInputValues] = useState({
@@ -25,31 +24,23 @@ export const CarbonTracker = () => {
     waste: ''
   });
 
-  const [activeTab, setActiveTab] = useState('daily');
-
-  useEffect(() => {
-    // Simulate historical data
-    const generateHistoricalData = () => {
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        return {
-          date: date.toLocaleDateString(),
-          value: Math.random() * 10 + 5,
-          transport: Math.random() * 4 + 2,
-          energy: Math.random() * 3 + 1,
-          waste: Math.random() * 3 + 2
-        };
-      }).reverse();
-      
-      setCarbonData(prev => ({
-        ...prev,
-        history: last7Days
-      }));
-    };
-
-    generateHistoricalData();
-  }, []);
+  const emissionsData = [{
+    type: 'scatter',
+    mode: 'lines+markers',
+    x: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    y: [23, 18, 15, 12, 10, 8],
+    name: 'CO₂ Emissions',
+    line: { 
+      color: '#8CB369',
+      width: 3,
+      shape: 'spline'
+    },
+    marker: {
+      color: '#2D5A27',
+      size: 8
+    },
+    hovertemplate: '%{y} kg CO₂<br>%{x}<extra></extra>'
+  }];
 
   const updateCarbonData = (category: keyof typeof carbonData, value: string) => {
     const numValue = value === '' ? 0 : parseFloat(value);
@@ -252,32 +243,27 @@ export const CarbonTracker = () => {
         </div>
       </motion.div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h4 className="text-lg font-semibold text-eco-primary">Emission Trends</h4>
-          <div className="flex space-x-2">
-            {['daily', 'weekly', 'monthly'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  activeTab === tab
-                    ? 'bg-eco-primary text-white'
-                    : 'bg-eco-background text-eco-primary'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
         </div>
-
-        <Chart
-          data={carbonData.history}
-          type="line"
-          dataKey="value"
-          xAxisKey="date"
-          title="Carbon Emissions Over Time"
+        <PlotlyChart
+          data={emissionsData}
+          title=""
+          layout={{
+            height: 300,
+            showlegend: false,
+            xaxis: {
+              showgrid: false,
+              zeroline: false
+            },
+            yaxis: { 
+              title: 'CO₂ (kg)',
+              showgrid: true,
+              gridcolor: 'rgba(0,0,0,0.1)',
+              zeroline: false
+            }
+          }}
         />
       </div>
     </motion.div>

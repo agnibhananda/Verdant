@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Target, Users, TreePine, Zap, Wind, Trash2, X } from 'lucide-react';
+import { Trophy, Target, Users, TreePine, BarChart3 } from 'lucide-react';
 import { CarbonTracker } from './CarbonTracker';
 import { AirQualityMonitor } from './AirQualityMonitor';
+import { PlotlyChart } from './PlotlyChart';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [showAchievements, setShowAchievements] = useState(false);
-  const [activityModalOpen, setActivityModalOpen] = useState(false);
-  const [dailyActivity, setDailyActivity] = useState({
-    transport: '',
-    energy: '',
-    waste: ''
-  });
 
   const stats = [
     { icon: Trophy, label: 'Total Points', value: '2,450' },
@@ -21,6 +16,17 @@ const Dashboard = () => {
     { icon: Users, label: 'Community Rank', value: '#42' },
     { icon: TreePine, label: 'CO₂ Saved', value: '125kg' },
   ];
+
+  const categoryData = [{
+    type: 'bar',
+    x: ['Transport', 'Energy', 'Waste'],
+    y: [30, 25, 15],
+    marker: { 
+      color: ['#8CB369', '#2D5A27', '#F4E285'],
+      opacity: 0.8
+    },
+    hovertemplate: '%{y} kg CO₂<br>%{x}<extra></extra>'
+  }];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -85,6 +91,42 @@ const Dashboard = () => {
         </div>
         <div className="space-y-4 md:space-y-6">
           <AirQualityMonitor />
+          
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+            className="bg-white rounded-lg shadow-md overflow-hidden"
+          >
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="h-5 w-5 text-eco-primary" />
+                <h3 className="text-lg font-semibold text-eco-primary">Emissions by Category</h3>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Distribution of carbon footprint sources</p>
+            </div>
+            <div className="p-4">
+              <PlotlyChart
+                data={categoryData}
+                title=""
+                layout={{
+                  height: 300,
+                  showlegend: false,
+                  xaxis: {
+                    showgrid: false,
+                    zeroline: false
+                  },
+                  yaxis: { 
+                    title: 'CO₂ (kg)',
+                    showgrid: true,
+                    gridcolor: 'rgba(0,0,0,0.1)',
+                    zeroline: false
+                  },
+                  bargap: 0.3
+                }}
+              />
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
