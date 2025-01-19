@@ -46,7 +46,6 @@ interface Post {
   user: {
     name: string;
     avatar_url: string;
-    karma: number;
   };
 }
 
@@ -64,7 +63,6 @@ interface Comment {
   user: {
     name: string;
     avatar_url: string;
-    karma: number;
   };
   replies?: Comment[];
 }
@@ -99,7 +97,6 @@ const Community = () => {
   const [awardTarget, setAwardTarget] = useState<{ id: string; type: 'post' | 'comment' } | null>(null);
   const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
-  const [userKarma, setUserKarma] = useState<number>(0);
   
   const observer = useRef<IntersectionObserver>();
   const lastPostRef = useCallback((node: HTMLDivElement) => {
@@ -116,26 +113,8 @@ const Community = () => {
 
   useEffect(() => {
     fetchPosts();
-    fetchUserKarma();
   }, [sortBy, selectedCategory, searchQuery, timeFilter]);
 
-  const fetchUserKarma = async () => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('karma')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setUserKarma(data.karma);
-    } catch (err) {
-      console.error('Error fetching karma:', err);
-    }
-  };
 
   const handleVote = async (type: 'post' | 'comment', id: string, value: 1 | -1) => {
     try {
@@ -287,7 +266,6 @@ const Community = () => {
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold text-eco-primary">{comment.user.name}</span>
-                  <span className="text-xs text-gray-500">• {comment.user.karma} karma</span>
                 </div>
                 <div className="text-xs text-gray-500">
                   {new Date(comment.created_at).toLocaleDateString()}
