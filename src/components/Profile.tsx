@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editMode, setEditMode] = useState(false);
-  const [profileImage, setProfileImage] = useState<string>("https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150");
+  const [profileImage, setProfileImage] = useState<string>("/avatar");
   
   const [userProfile, setUserProfile] = useState({
     name: 'Agnibha Nanda',
