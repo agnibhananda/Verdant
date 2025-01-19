@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User, AlertCircle } from 'lucide-react';
-import { ProfileSetup } from './ProfileSetup';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -15,7 +14,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +27,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           password,
         });
         if (error) throw error;
-        onAuthSuccess();
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -41,33 +38,14 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           },
         });
         if (error) throw error;
-        setShowProfileSetup(true);
       }
+      onAuthSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleProfileSetupComplete = () => {
-    setShowProfileSetup(false);
-    onAuthSuccess();
-  };
-
-  const handleProfileSetupSkip = () => {
-    setShowProfileSetup(false);
-    onAuthSuccess();
-  };
-
-  if (showProfileSetup) {
-    return (
-      <ProfileSetup
-        onComplete={handleProfileSetupComplete}
-        onSkip={handleProfileSetupSkip}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-eco-background flex items-center justify-center p-4">
