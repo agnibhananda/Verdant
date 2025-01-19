@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award } from 'lucide-react';
+import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award, Upload, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Challenges = () => {
   const [joinedChallenges, setJoinedChallenges] = useState<string[]>([]);
   const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
-  const [verificationData, setVerificationData] = useState<Record<string, { status: string; proof: string }>>({});
+  const [verificationData, setVerificationData] = useState<Record<string, { 
+    status: string; 
+    photo: string | null;
+    reviews: Array<{ userId: string; score: number }>;
+    reviewsDone: number;
+  }>>({});
 
   const challenges = [
     {
@@ -44,10 +49,10 @@ const Challenges = () => {
       points: 300,
       difficulty: 'Easy',
       participants: 2156,
-      verificationMethod: 'peer',
+      verificationMethod: 'photo',
       requirements: [
         'Document electricity-free activities',
-        'Get verification from two community members',
+        'Submit photo evidence of candlelit evening',
         'Share experience in community forum'
       ],
       milestones: [
@@ -71,16 +76,16 @@ const Challenges = () => {
       points: 750,
       difficulty: 'Hard',
       participants: 892,
-      verificationMethod: 'location',
+      verificationMethod: 'photo',
       requirements: [
         'Track all waste produced',
-        'Visit recycling center',
-        'Submit photo evidence of waste reduction'
+        'Submit daily photo evidence',
+        'Document waste reduction methods'
       ],
       milestones: [
         { title: 'Start Challenge', points: 75, completed: false },
         { title: 'First Day Zero Waste', points: 200, completed: false },
-        { title: 'Visit Recycling Center', points: 175, completed: false },
+        { title: 'Week Complete', points: 175, completed: false },
         { title: 'Challenge Complete', points: 300, completed: false }
       ],
       tips: [
@@ -101,27 +106,120 @@ const Challenges = () => {
     setSelectedChallenge(null);
   };
 
-  const handleVerification = (challengeId: string, method: string) => {
+  const handlePhotoUpload = async (challengeId: string, photo: File) => {
+    // In a real app, you would upload the photo to storage
+    const photoUrl = URL.createObjectURL(photo);
     setVerificationData(prev => ({
       ...prev,
-      [challengeId]: { 
-        status: 'pending',
-        proof: `${method === 'photo' ? 'Photo' : method === 'peer' ? 'Peer verification' : 'Location'} submitted for review`
+      [challengeId]: {
+        status: 'pending_reviews',
+        photo: photoUrl,
+        reviews: [],
+        reviewsDone: 0
       }
     }));
   };
 
-  const VerificationIcon = ({ method }: { method: string }) => {
-    switch (method) {
-      case 'photo':
-        return <Camera className="h-5 w-5" />;
-      case 'peer':
-        return <Users className="h-5 w-5" />;
-      case 'location':
-        return <MapPin className="h-5 w-5" />;
-      default:
-        return null;
+  const handlePeerReview = (challengeId: string, score: number) => {
+    setVerificationData(prev => {
+      const challenge = prev[challengeId];
+      if (!challenge) return prev;
+
+      const newReviews = [...challenge.reviews, { userId: 'current-user', score }];
+      const totalScore = newReviews.reduce((sum, review) => sum + review.score, 0);
+      const averageScore = totalScore / newReviews.length;
+      
+      const newStatus = newReviews.length >= 3 
+        ? (averageScore >= 60 ? 'verified' : 'rejected')
+        : 'pending_reviews';
+
+      return {
+        ...prev,
+        [challengeId]: {
+          ...challenge,
+          reviews: newReviews,
+          status: newStatus
+        }
+      };
+    });
+
+    // Add points for completing a review
+    if (verificationData[challengeId]?.reviewsDone === 2) {
+      // User completed 3 reviews, award 10 points
+      console.log('Awarded 10 points for completing 3 reviews');
     }
+  };
+
+  const renderVerificationSection = (challenge: any) => {
+    const verification = verificationData[challenge.id];
+    
+    if (!verification) {
+      return (
+        <div className="mt-4">
+          <label className="flex flex-col items-center p-4 border-2 border-dashed border-eco-primary rounded-lg cursor-pointer hover:bg-eco-accent/10">
+            <Camera className="h-8 w-8 text-eco-primary mb-2" />
+            <span className="text-sm text-gray-600">Upload verification photo</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handlePhotoUpload(challenge.id, file);
+              }}
+            />
+          </label>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 space-y-4">
+        {verification.photo && (
+          <div className="relative">
+            <img
+              src={verification.photo}
+              alt="Verification"
+              className="w-full rounded-lg"
+            />
+            <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm">
+              {verification.status === 'pending_reviews' && (
+                <span className="text-yellow-500">Pending Reviews</span>
+              )}
+              {verification.status === 'verified' && (
+                <span className="text-green-500">Verified</span>
+              )}
+              {verification.status === 'rejected' && (
+                <span className="text-red-500">Rejected</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {verification.status === 'pending_reviews' && verification.reviews.length < 3 && (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">Rate this submission (0-100):</p>
+            <div className="flex space-x-2">
+              {[30, 60, 90].map((score) => (
+                <button
+                  key={score}
+                  onClick={() => handlePeerReview(challenge.id, score)}
+                  className="flex-1 py-2 px-4 bg-eco-background rounded-lg hover:bg-eco-accent/20"
+                >
+                  <Star className="h-4 w-4 mx-auto mb-1" />
+                  {score}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-sm text-gray-600">
+          {verification.reviews.length} of 3 reviews completed
+          {verification.status === 'verified' && ' • +30 points awarded'}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -162,15 +260,11 @@ const Challenges = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-600">
-                        {verificationData[challenge.id]?.status || 'Not verified'}
-                      </span>
-                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* Progress bar */}
+                  {renderVerificationSection(challenge)}
+
+                  <div className="mt-4 space-y-4">
                     <div className="bg-eco-background rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-eco-primary h-full rounded-full transition-all duration-500"
@@ -178,7 +272,6 @@ const Challenges = () => {
                       />
                     </div>
 
-                    {/* Milestones */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {challenge.milestones.map((milestone, index) => (
                         <div
@@ -201,33 +294,6 @@ const Challenges = () => {
                         </div>
                       ))}
                     </div>
-
-                    {/* Tips */}
-                    <div className="bg-eco-accent/10 rounded-lg p-4">
-                      <h5 className="font-medium text-eco-primary mb-2">Pro Tips</h5>
-                      <ul className="space-y-2">
-                        {challenge.tips.map((tip, index) => (
-                          <li key={index} className="flex items-center space-x-2 text-sm text-gray-600">
-                            <Zap className="h-4 w-4 text-eco-secondary" />
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Verification */}
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <VerificationIcon method={challenge.verificationMethod} />
-                        <span>Verify via {challenge.verificationMethod}</span>
-                      </div>
-                      <button
-                        onClick={() => handleVerification(challenge.id, challenge.verificationMethod)}
-                        className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary transition-colors"
-                      >
-                        Submit Verification
-                      </button>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -237,7 +303,6 @@ const Challenges = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {challenges.map((challenge) => {
-          const Icon = challenge.icon;
           const isJoined = joinedChallenges.includes(challenge.id);
 
           return (
@@ -249,7 +314,7 @@ const Challenges = () => {
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-eco-accent rounded-lg">
-                    <Icon className="h-6 w-6 text-eco-primary" />
+                    <challenge.icon className="h-6 w-6 text-eco-primary" />
                   </div>
                   <h3 className="text-xl font-bold text-eco-primary">{challenge.title}</h3>
                 </div>
@@ -278,102 +343,25 @@ const Challenges = () => {
                     <span className="text-gray-600">Participants:</span>
                     <div className="flex items-center space-x-1">
                       <Users className="h-4 w-4 text-eco-secondary" />
-                      <span className="font-semibold">{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()}</span>
+                      <span className="font-semibold">{challenge.participants}</span>
                     </div>
                   </div>
                 </div>
               </div>
               <button
-                onClick={isJoined ? () => handleJoinChallenge(challenge.id) : () => setSelectedChallenge(challenge)}
+                onClick={() => handleJoinChallenge(challenge.id)}
                 className={`w-full py-3 font-semibold transition-colors ${
                   isJoined
                     ? 'bg-eco-secondary text-white hover:bg-eco-primary'
                     : 'bg-eco-primary text-white hover:bg-eco-secondary'
                 }`}
               >
-                {isJoined ? 'Leave Challenge' : 'View Details'}
+                {isJoined ? 'Leave Challenge' : 'Join Challenge'}
               </button>
             </motion.div>
           );
         })}
       </div>
-
-      <AnimatePresence>
-        {selectedChallenge && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => setSelectedChallenge(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }} exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full"
-            >
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 bg-eco-accent rounded-lg">
-                  <selectedChallenge.icon className="h-6 w-6 text-eco-primary" />
-                </div>
-                <h3 className="text-2xl font-bold text-eco-primary">{selectedChallenge.title}</h3>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-semibold text-eco-primary mb-2">Description</h4>
-                  <p className="text-gray-600">{selectedChallenge.description}</p>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-eco-primary mb-2">Requirements</h4>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
-                    {selectedChallenge.requirements.map((req: string, index: number) => (
-                      <li key={index}>{req}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-eco-primary mb-2">Milestones</h4>
-                  <div className="space-y-3">
-                    {selectedChallenge.milestones.map((milestone: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-gray-600">{milestone.title}</span>
-                        <span className="font-medium text-eco-primary">+{milestone.points} points</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-eco-primary mb-2">Verification Method</h4>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <VerificationIcon method={selectedChallenge.verificationMethod} />
-                    <span className="capitalize">{selectedChallenge.verificationMethod} verification required</span>
-                  </div>
-                </div>
-
-                <div className="flex space-x-4">
-                  <button
-                    onClick={() => setSelectedChallenge(null)}
-                    className="flex-1 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => handleJoinChallenge(selectedChallenge.id)}
-                    className="flex-1 py-3 bg-eco-primary text-white font-semibold rounded-lg hover:bg-eco-secondary transition-colors"
-                  >
-                    Join Challenge
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
