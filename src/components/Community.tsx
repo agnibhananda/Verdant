@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   MessageSquare, 
@@ -27,14 +27,19 @@ import {
   Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabase';
+import { cn } from '../lib/utils';
+
+interface User {
+  name: string;
+  avatar_url: string;
+}
 
 interface Post {
   id: string;
   title: string;
   content: string;
   created_at: string;
-  user_id: string;
+  user: User;
   likes: number;
   dislikes: number;
   comments_count: number;
@@ -43,27 +48,19 @@ interface Post {
   is_saved: boolean;
   category: string;
   awards: Award[];
-  user: {
-    name: string;
-    avatar_url: string;
-  };
 }
 
 interface Comment {
   id: string;
   content: string;
   created_at: string;
-  user_id: string;
+  user: User;
   likes: number;
   dislikes: number;
   is_liked: boolean;
   is_disliked: boolean;
   parent_id?: string;
   depth: number;
-  user: {
-    name: string;
-    avatar_url: string;
-  };
   replies?: Comment[];
 }
 
@@ -74,12 +71,47 @@ interface Award {
   created_at: string;
 }
 
+// Mock post data (replace with your actual data fetching logic)
+const mockPosts: Post[] = [
+  {
+    id: '1',
+    title: 'Sustainable Living Tips',
+    content: 'Reduce, reuse, recycle!  Here are some simple ways to make a difference...',
+    created_at: '2024-03-08T10:00:00Z',
+    user: { name: 'John Doe', avatar_url: '/avatar.jpg' },
+    likes: 15,
+    dislikes: 2,
+    comments_count: 5,
+    is_liked: false,
+    is_disliked: false,
+    is_saved: false,
+    category: 'general',
+    awards: []
+  },
+  {
+    id: '2',
+    title: 'Question about composting',
+    content: 'I\'m new to composting. Any tips for beginners?',
+    created_at: '2024-03-07T14:30:00Z',
+    user: { name: 'Jane Smith', avatar_url: '/avatar.jpg' },
+    likes: 8,
+    dislikes: 0,
+    comments_count: 2,
+    is_liked: false,
+    is_disliked: false,
+    is_saved: false,
+    category: 'question',
+    awards: []
+  },
+  // Add more mock posts as needed
+];
+
 const Community = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showNewPostModal, setShowNewPostModal] = useState(false);
   const [newPost, setNewPost] = useState({ title: '', content: '', category: 'general' });
@@ -104,144 +136,67 @@ const Community = () => {
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting) {
-        // Load more posts
-        fetchPosts(true);
+        // Load more posts (mock implementation)
+        setPosts(prevPosts => [...prevPosts, ...mockPosts.slice(0, 3)]);
       }
     });
     if (node) observer.current.observe(node);
   }, [loading]);
 
-  useEffect(() => {
-    fetchPosts();
-  }, [sortBy, selectedCategory, searchQuery, timeFilter]);
-
-
-  const handleVote = async (type: 'post' | 'comment', id: string, value: 1 | -1) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: existingVote } = await supabase
-        .from('votes')
-        .select()
-        .eq('user_id', user.id)
-        .eq('target_id', id)
-        .eq('target_type', type)
-        .single();
-
-      if (existingVote?.value === value) {
-        // Remove vote
-        await supabase
-          .from('votes')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('target_id', id)
-          .eq('target_type', type);
-      } else {
-        // Upsert vote
-        await supabase
-          .from('votes')
-          .upsert({
-            user_id: user.id,
-            target_id: id,
-            target_type: type,
-            value
-          }, {
-            onConflict: 'user_id,target_id,target_type'
-          });
-      }
-
-      if (type === 'post') {
-        fetchPosts();
-      } else {
-        const post = posts.find(p => 
-          comments[p.id]?.some(c => c.id === id)
-        );
-        if (post) {
-          fetchComments(post.id);
+  const handleVote = (type: 'post' | 'comment', id: string, value: 1 | -1) => {
+    // Mock implementation
+    if (type === 'post') {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === id
+            ? { ...post, likes: post.likes + (value === 1 ? 1 : 0), dislikes: post.dislikes + (value === -1 ? 1 : 0), is_liked: value === 1, is_disliked: value === -1 }
+            : post
+        )
+      );
+    } else {
+      setComments(prevComments => {
+        const updatedComments = { ...prevComments };
+        for (const postId in updatedComments) {
+          updatedComments[postId] = updatedComments[postId].map(comment =>
+            comment.id === id
+              ? { ...comment, likes: comment.likes + (value === 1 ? 1 : 0), dislikes: comment.dislikes + (value === -1 ? 1 : 0), is_liked: value === 1, is_disliked: value === -1 }
+              : comment
+          );
         }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to vote');
+        return updatedComments;
+      });
     }
   };
 
-  const handleSave = async (type: 'post' | 'comment', id: string) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: existingSave } = await supabase
-        .from('saves')
-        .select()
-        .eq('user_id', user.id)
-        .eq('target_id', id)
-        .eq('target_type', type)
-        .single();
-
-      if (existingSave) {
-        await supabase
-          .from('saves')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('target_id', id)
-          .eq('target_type', type);
-      } else {
-        await supabase
-          .from('saves')
-          .insert({
-            user_id: user.id,
-            target_id: id,
-            target_type: type
-          });
-      }
-
-      fetchPosts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save item');
-    }
-  };
-
-  const handleAward = async (type: 'post' | 'comment', id: string, awardType: string) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-
-      await supabase
-        .from('awards')
-        .insert({
-          user_id: user.id,
-          target_id: id,
-          target_type: type,
-          award_type: awardType
-        });
-
-      setShowAwardModal(false);
-      setAwardTarget(null);
-      
-      if (type === 'post') {
-        fetchPosts();
-      } else {
-        const post = posts.find(p => 
-          comments[p.id]?.some(c => c.id === id)
-        );
-        if (post) {
-          fetchComments(post.id);
+  const handleSave = (type: 'post' | 'comment', id: string) => {
+    if (type === 'post') {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === id ? { ...post, is_saved: !post.is_saved } : post
+        )
+      );
+    } else {
+      setComments(prevComments => {
+        const updatedComments = { ...prevComments };
+        for (const postId in updatedComments) {
+          updatedComments[postId] = updatedComments[postId].map(comment =>
+            comment.id === id ? { ...comment, is_saved: !comment.is_saved } : comment
+          );
         }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to give award');
+        return updatedComments;
+      });
     }
   };
 
-  const handleShare = async (type: 'post' | 'comment', id: string) => {
-    try {
-      const url = `${window.location.origin}/community/${type}/${id}`;
-      await navigator.clipboard.writeText(url);
-      // Show success toast
-    } catch (err) {
-      setError('Failed to copy link');
-    }
+  const handleAward = (type: 'post' | 'comment', id: string, awardType: string) => {
+    // Mock implementation
+    setShowAwardModal(false);
+    setAwardTarget(null);
+  };
+
+  const handleShare = (type: 'post' | 'comment', id: string) => {
+    // Mock implementation
+    console.log(`Share ${type} with id: ${id}`);
   };
 
   const renderComment = (comment: Comment, postId: string) => {
@@ -365,7 +320,7 @@ const Community = () => {
               Reply
             </button>
 
-            {comment.user_id === (supabase.auth.getUser())?.data?.user?.id && (
+            {comment.user_id === 'mock-user-id' && (
               <>
                 <button
                   onClick={() => {
@@ -404,7 +359,7 @@ const Community = () => {
                 <button
                   onClick={() => handleCreateComment(postId, comment.id)}
                   className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
-                >disabled={!newComment[comment.id]?.trim()}
+                >
                   Reply
                 </button>
               </div>
@@ -417,148 +372,71 @@ const Community = () => {
     );
   };
 
-  const handleCreateComment = async (postId: string, parentId?: string) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
+  const handleCreateComment = (postId: string, parentId?: string) => {
+    // Mock implementation
+    const content = parentId ? newComment[parentId] : newComment[postId];
+    if (!content?.trim()) return;
 
-      const content = parentId ? newComment[parentId] : newComment[postId];
-      if (!content?.trim()) return;
+    const newCommentData = {
+      id: Math.random().toString(36).substring(2, 15),
+      content,
+      created_at: new Date().toISOString(),
+      user: { name: 'Mock User', avatar_url: '/avatar.jpg' },
+      likes: 0,
+      dislikes: 0,
+      is_liked: false,
+      is_disliked: false,
+      parent_id: parentId,
+      depth: parentId ? (comments[postId]?.find(c => c.id === parentId)?.depth ?? 0) + 1 : 0,
+      replies: []
+    };
 
-      const { data: comment, error } = await supabase
-        .from('comments')
-        .insert({
-          content,
-          post_id: postId,
-          user_id: user.id,
-          parent_id: parentId,
-          depth: parentId ? 
-            (comments[postId]?.find(c => c.id === parentId)?.depth ?? 0) + 1 : 
-            0
-        })
-        .select(`
-          *,
-          user:profiles(name, avatar_url)
-        `)
-        .single();
+    setComments(prevComments => {
+      const updatedComments = { ...prevComments };
+      if (parentId) {
+        const parentComment = updatedComments[postId]?.find(c => c.id === parentId);
+        if (parentComment) {
+          parentComment.replies = [...(parentComment.replies || []), newCommentData];
+        }
+      } else {
+        updatedComments[postId] = [...(updatedComments[postId] || []), newCommentData];
+      }
+      return updatedComments;
+    });
 
-      if (error) throw error;
-
-      setNewComment({});
-      setReplyingTo(null);
-      await fetchComments(postId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create comment');
-    }
+    setNewComment({});
+    setReplyingTo(null);
   };
 
-  const handleEditComment = async (commentId: string, postId: string) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-
-      if (!editedContent.trim()) return;
-
-      const { error } = await supabase
-        .from('comments')
-        .update({ content: editedContent })
-        .eq('id', commentId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setEditingComment(null);
-      setEditedContent('');
-      await fetchComments(postId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to edit comment');
-    }
+  const handleEditComment = (commentId: string, postId: string) => {
+    // Mock implementation
+    setComments(prevComments => {
+      const updatedComments = { ...prevComments };
+      for (const postId in updatedComments) {
+        updatedComments[postId] = updatedComments[postId].map(comment =>
+          comment.id === commentId ? { ...comment, content: editedContent } : comment
+        );
+      }
+      return updatedComments;
+    });
+    setEditingComment(null);
+    setEditedContent('');
   };
 
-  const handleDeleteComment = async (commentId: string, postId: string) => {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', commentId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      await fetchComments(postId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete comment');
-    }
+  const handleDeleteComment = (commentId: string, postId: string) => {
+    // Mock implementation
+    setComments(prevComments => {
+      const updatedComments = { ...prevComments };
+      for (const postId in updatedComments) {
+        updatedComments[postId] = updatedComments[postId].filter(comment => comment.id !== commentId);
+      }
+      return updatedComments;
+    });
   };
 
-  const fetchPosts = async (loadMore = false) => {
-    try {
-      setLoading(true);
-      const user = (await supabase.auth.getUser()).data.user;
-
-      let query = supabase
-        .from('posts')
-        .select(`
-          *,
-          user:profiles(name, avatar_url),
-          awards(id, type, user_id, created_at),
-          comments:comments_count(count)
-        `);
-
-      // Apply filters
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      if (searchQuery) {
-        query = query.ilike('title', `%${searchQuery}%`);
-      }
-
-      // Apply time filter
-      const now = new Date();
-      switch (timeFilter) {
-        case 'today':
-          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 1)).toISOString());
-          break;
-        case 'week':
-          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 7)).toISOString());
-          break;
-        case 'month':
-          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 30)).toISOString());
-          break;
-        case 'year':
-          query = query.gte('created_at', new Date(now.setDate(now.getDate() - 365)).toISOString());
-          break;
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'newest':
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'hot':
-          query = query.order('comments_count', { ascending: false });
-          break;
-        case 'top':
-          query = query.order('likes', { ascending: false });
-          break;
-        case 'controversial':
-          query = query.order('dislikes', { ascending: false });
-          break;
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      setPosts(prev => loadMore ? [...prev, ...data] : data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-    } finally {
-      setLoading(false);
-    }
+  const fetchPosts = (loadMore = false) => {
+    // Mock implementation
+    setLoading(false);
   };
 
   return (
@@ -646,9 +524,8 @@ const Community = () => {
           <div
             key={post.id}
             ref={index === posts.length - 1 ? lastPostRef : null}
-            className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            {/* Post content */}
+            {renderPost(post)}
           </div>
         ))}
 
@@ -660,7 +537,189 @@ const Community = () => {
       </div>
 
       {/* Modals */}
-      {/* Add implementation for NewPostModal, ReportModal, and AwardModal */}
+      <AnimatePresence>
+        {showNewPostModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowNewPostModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+            >
+              <h3 className="text-xl font-bold text-eco-primary mb-4">Create New Post</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={newPost.title}
+                    onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                  <textarea
+                    value={newPost.content}
+                    onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={newPost.category}
+                    onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+                  >
+                    <option value="general">General</option>
+                    <option value="question">Question</option>
+                    <option value="discussion">Discussion</option>
+                    <option value="announcement">Announcement</option>
+                  </select>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setShowNewPostModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPosts(prevPosts => [
+                        {
+                          id: Math.random().toString(36).substring(2, 15),
+                          title: newPost.title,
+                          content: newPost.content,
+                          created_at: new Date().toISOString(),
+                          user: { name: 'Mock User', avatar_url: '/avatar.jpg' },
+                          likes: 0,
+                          dislikes: 0,
+                          comments_count: 0,
+                          is_liked: false,
+                          is_disliked: false,
+                          is_saved: false,
+                          category: newPost.category,
+                          awards: []
+                        },
+                        ...prevPosts
+                      ]);
+                      setShowNewPostModal(false);
+                      setNewPost({ title: '', content: '', category: 'general' });
+                    }}
+                    className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowReportModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+            >
+              <h3 className="text-xl font-bold text-eco-primary mb-4">Report Content</h3>
+              <div className="space-y-4">
+                <textarea
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Reason for reporting..."
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setShowReportModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowReportModal(false);
+                      setReportReason('');
+                      setReportItemId(null);
+                    }}
+                    className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
+                  >
+                    Submit Report
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAwardModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowAwardModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+            >
+              <h3 className="text-xl font-bold text-eco-primary mb-4">Give an Award</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  {['helpful', 'insightful', 'inspiring'].map(awardType => (
+                    <button
+                      key={awardType}
+                      onClick={() => {
+                        if (awardTarget) {
+                          handleAward(awardTarget.type, awardTarget.id, awardType);
+                        }
+                      }}
+                      className="bg-eco-background p-4 rounded-lg hover:bg-eco-accent/20 transition-colors"
+                    >
+                      <span className="capitalize">{awardType}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowAwardModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
