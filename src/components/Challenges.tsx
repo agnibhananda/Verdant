@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone } from 'lucide-react';
+import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Challenges = () => {
@@ -22,6 +22,17 @@ const Challenges = () => {
         'Track daily water usage',
         'Submit photo evidence of water-saving techniques',
         'Share tips with community'
+      ],
+      milestones: [
+        { title: 'Start Challenge', points: 50, completed: false },
+        { title: 'First Week Complete', points: 150, completed: false },
+        { title: 'Share Progress', points: 100, completed: false },
+        { title: 'Challenge Complete', points: 200, completed: false }
+      ],
+      tips: [
+        'Install water-efficient fixtures',
+        'Fix leaky faucets',
+        'Collect rainwater for plants'
       ]
     },
     {
@@ -38,13 +49,24 @@ const Challenges = () => {
         'Document electricity-free activities',
         'Get verification from two community members',
         'Share experience in community forum'
+      ],
+      milestones: [
+        { title: 'Start Challenge', points: 30, completed: false },
+        { title: 'First Evening Complete', points: 100, completed: false },
+        { title: 'Community Verification', points: 70, completed: false },
+        { title: 'Challenge Complete', points: 100, completed: false }
+      ],
+      tips: [
+        'Plan activities in advance',
+        'Use natural light',
+        'Try meditation or reading'
       ]
     },
     {
       id: '3',
       icon: Recycle,
       title: 'Zero Waste Challenge',
-      description: 'Produce zero non-recyclable waste for an entire week. Sustainable Living Transformation',
+      description: 'Produce zero non-recyclable waste for an entire week.',
       category: 'waste',
       points: 750,
       difficulty: 'Hard',
@@ -54,8 +76,19 @@ const Challenges = () => {
         'Track all waste produced',
         'Visit recycling center',
         'Submit photo evidence of waste reduction'
+      ],
+      milestones: [
+        { title: 'Start Challenge', points: 75, completed: false },
+        { title: 'First Day Zero Waste', points: 200, completed: false },
+        { title: 'Visit Recycling Center', points: 175, completed: false },
+        { title: 'Challenge Complete', points: 300, completed: false }
+      ],
+      tips: [
+        'Use reusable containers',
+        'Shop at bulk stores',
+        'Start composting'
       ]
-    },
+    }
   ];
 
   const handleJoinChallenge = (challengeId: string) => {
@@ -69,26 +102,13 @@ const Challenges = () => {
   };
 
   const handleVerification = (challengeId: string, method: string) => {
-    switch (method) {
-      case 'photo':
-        setVerificationData(prev => ({
-          ...prev,
-          [challengeId]: { status: 'pending', proof: 'Photo submitted for review' }
-        }));
-        break;
-      case 'peer':
-        setVerificationData(prev => ({
-          ...prev,
-          [challengeId]: { status: 'pending', proof: 'Peer verification requested' }
-        }));
-        break;
-      case 'location':
-        setVerificationData(prev => ({
-          ...prev,
-          [challengeId]: { status: 'pending', proof: 'Location verification in progress' }
-        }));
-        break;
-    }
+    setVerificationData(prev => ({
+      ...prev,
+      [challengeId]: { 
+        status: 'pending',
+        proof: `${method === 'photo' ? 'Photo' : method === 'peer' ? 'Peer verification' : 'Location'} submitted for review`
+      }
+    }));
   };
 
   const VerificationIcon = ({ method }: { method: string }) => {
@@ -107,7 +127,10 @@ const Challenges = () => {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-eco-primary">Monthly Challenges</h2>
+        <div>
+          <h2 className="text-3xl font-bold text-eco-primary">Active Challenges</h2>
+          <p className="mt-2 text-gray-600">Join challenges to earn points and make a difference</p>
+        </div>
         <div className="flex items-center space-x-2 text-eco-primary">
           <Calendar className="h-5 w-5" />
           <span>March 2024</span>
@@ -120,35 +143,92 @@ const Challenges = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-lg shadow-md p-6"
         >
-          <h3 className="text-xl font-bold text-eco-primary mb-4">Current Challenges</h3>
-          <div className="space-y-4">
+          <h3 className="text-xl font-bold text-eco-primary mb-4">Your Active Challenges</h3>
+          <div className="space-y-6">
             {challenges
               .filter(challenge => joinedChallenges.includes(challenge.id))
               .map(challenge => (
-                <div key={`active-${challenge.id}`} className="border-b pb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold text-eco-primary">{challenge.title}</h4>
-                    <span className="text-sm text-gray-600">
-                      {verificationData[challenge.id]?.status || 'Not verified'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <VerificationIcon method={challenge.verificationMethod} />
-                      <span>Verify via {challenge.verificationMethod}</span>
+                <div key={`active-${challenge.id}`} className="border-b pb-6 last:border-b-0 last:pb-0">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-eco-accent rounded-lg">
+                        <challenge.icon className="h-6 w-6 text-eco-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-eco-primary">{challenge.title}</h4>
+                        <div className="flex items-center space-x-2 text-sm text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          <span>7 days remaining</span>
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleVerification(challenge.id, challenge.verificationMethod)}
-                      className="bg-eco-secondary text-white px-4 py-2 rounded-lg text-sm"
-                    >
-                      Submit Verification
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        {verificationData[challenge.id]?.status || 'Not verified'}
+                      </span>
+                    </div>
                   </div>
-                  {verificationData[challenge.id]?.proof && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      {verificationData[challenge.id].proof}
-                    </p>
-                  )}
+
+                  <div className="space-y-4">
+                    {/* Progress bar */}
+                    <div className="bg-eco-background rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-eco-primary h-full rounded-full transition-all duration-500"
+                        style={{ width: '45%' }}
+                      />
+                    </div>
+
+                    {/* Milestones */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {challenge.milestones.map((milestone, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-3 p-3 rounded-lg bg-eco-background"
+                        >
+                          <div className={`p-1 rounded-full ${
+                            milestone.completed ? 'bg-green-100' : 'bg-gray-100'
+                          }`}>
+                            {milestone.completed ? (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <Clock className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-eco-primary">{milestone.title}</p>
+                            <p className="text-sm text-gray-600">+{milestone.points} points</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tips */}
+                    <div className="bg-eco-accent/10 rounded-lg p-4">
+                      <h5 className="font-medium text-eco-primary mb-2">Pro Tips</h5>
+                      <ul className="space-y-2">
+                        {challenge.tips.map((tip, index) => (
+                          <li key={index} className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Zap className="h-4 w-4 text-eco-secondary" />
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Verification */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <VerificationIcon method={challenge.verificationMethod} />
+                        <span>Verify via {challenge.verificationMethod}</span>
+                      </div>
+                      <button
+                        onClick={() => handleVerification(challenge.id, challenge.verificationMethod)}
+                        className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary transition-colors"
+                      >
+                        Submit Verification
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
           </div>
@@ -181,15 +261,25 @@ const Challenges = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Points:</span>
-                    <span className="font-semibold">{challenge.points}</span>
+                    <div className="flex items-center space-x-1">
+                      <Award className="h-4 w-4 text-eco-secondary" />
+                      <span className="font-semibold">{challenge.points}</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Difficulty:</span>
-                    <span className="font-semibold">{challenge.difficulty}</span>
+                    <span className={`font-semibold ${
+                      challenge.difficulty === 'Easy' ? 'text-green-500' :
+                      challenge.difficulty === 'Medium' ? 'text-yellow-500' :
+                      'text-red-500'
+                    }`}>{challenge.difficulty}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Participants:</span>
-                    <span className="font-semibold">{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()}</span>
+                    <div className="flex items-center space-x-1">
+                      <Users className="h-4 w-4 text-eco-secondary" />
+                      <span className="font-semibold">{(challenge.participants + (isJoined ? 1 : 0)).toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -201,7 +291,7 @@ const Challenges = () => {
                     : 'bg-eco-primary text-white hover:bg-eco-secondary'
                 }`}
               >
-                {isJoined ? 'Leave' : 'View Details'}
+                {isJoined ? 'Leave Challenge' : 'View Details'}
               </button>
             </motion.div>
           );
@@ -219,8 +309,7 @@ const Challenges = () => {
           >
             <motion.div
               initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
+              animate={{ scale: 1 }} exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full"
             >
@@ -244,6 +333,18 @@ const Challenges = () => {
                       <li key={index}>{req}</li>
                     ))}
                   </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-eco-primary mb-2">Milestones</h4>
+                  <div className="space-y-3">
+                    {selectedChallenge.milestones.map((milestone: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-gray-600">{milestone.title}</span>
+                        <span className="font-medium text-eco-primary">+{milestone.points} points</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div>

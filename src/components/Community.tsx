@@ -1,725 +1,399 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, 
   Users, 
   Trophy,
   Share2, 
   ThumbsUp,
-  ThumbsDown,
   Plus,
-  Send,
-  X,
-  Flag,
   Search,
   Filter,
   ArrowUp,
-  ArrowDown,
-  MoreVertical,
-  Calendar,
-  Tag,
-  Clock,
-  AlertTriangle,
-  Bookmark,
-  Save,
   Award,
-  Edit,
-  Trash2
+  Lightbulb,
+  Star,
+  Heart,
+  BookOpen
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../lib/utils';
-
-interface User {
-  name: string;
-  avatar_url: string;
-}
 
 interface Post {
   id: string;
   title: string;
   content: string;
-  created_at: string;
-  user: User;
+  author: {
+    name: string;
+    avatar: string;
+    reputation: number;
+  };
   likes: number;
-  dislikes: number;
-  comments_count: number;
-  is_liked: boolean;
-  is_disliked: boolean;
-  is_saved: boolean;
+  comments: number;
+  tags: string[];
+  createdAt: string;
+  isLiked: boolean;
+}
+
+interface Tip {
+  id: string;
+  title: string;
+  description: string;
+  author: {
+    name: string;
+    avatar: string;
+    reputation: number;
+  };
   category: string;
-  awards: Award[];
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  user: User;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   likes: number;
-  dislikes: number;
-  is_liked: boolean;
-  is_disliked: boolean;
-  parent_id?: string;
-  depth: number;
-  replies?: Comment[];
+  price: number;
+  preview: string;
 }
 
-interface Award {
+interface Contributor {
   id: string;
-  type: string;
-  user_id: string;
-  created_at: string;
+  name: string;
+  avatar: string;
+  reputation: number;
+  contributions: number;
+  specialties: string[];
+  badges: string[];
 }
-
-// Mock post data (replace with your actual data fetching logic)
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    title: 'Sustainable Living Tips',
-    content: 'Reduce, reuse, recycle!  Here are some simple ways to make a difference...',
-    created_at: '2024-03-08T10:00:00Z',
-    user: { name: 'John Doe', avatar_url: '/avatar.jpg' },
-    likes: 15,
-    dislikes: 2,
-    comments_count: 5,
-    is_liked: false,
-    is_disliked: false,
-    is_saved: false,
-    category: 'general',
-    awards: []
-  },
-  {
-    id: '2',
-    title: 'Question about composting',
-    content: 'I\'m new to composting. Any tips for beginners?',
-    created_at: '2024-03-07T14:30:00Z',
-    user: { name: 'Jane Smith', avatar_url: '/avatar.jpg' },
-    likes: 8,
-    dislikes: 0,
-    comments_count: 2,
-    is_liked: false,
-    is_disliked: false,
-    is_saved: false,
-    category: 'question',
-    awards: []
-  },
-  // Add more mock posts as needed
-];
 
 const Community = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
-  const [comments, setComments] = useState<Record<string, Comment[]>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [newPost, setNewPost] = useState({ title: '', content: '', category: 'general' });
+  const [activeTab, setActiveTab] = useState<'forum' | 'tips' | 'contributors'>('forum');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'hot' | 'top' | 'controversial'>('hot');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportItemId, setReportItemId] = useState<string | null>(null);
-  const [newComment, setNewComment] = useState<Record<string, string>>({});
-  const [editingComment, setEditingComment] = useState<string | null>(null);
-  const [editedContent, setEditedContent] = useState('');
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [showAwardModal, setShowAwardModal] = useState(false);
-  const [awardTarget, setAwardTarget] = useState<{ id: string; type: 'post' | 'comment' } | null>(null);
-  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
-  const [expandedPost, setExpandedPost] = useState<string | null>(null);
-  
-  const observer = useRef<IntersectionObserver>();
-  const lastPostRef = useCallback((node: HTMLDivElement) => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        // Load more posts (mock implementation)
-        setPosts(prevPosts => [...prevPosts, ...mockPosts.slice(0, 3)]);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loading]);
 
-  const handleVote = (type: 'post' | 'comment', id: string, value: 1 | -1) => {
-    // Mock implementation
-    if (type === 'post') {
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === id
-            ? { ...post, likes: post.likes + (value === 1 ? 1 : 0), dislikes: post.dislikes + (value === -1 ? 1 : 0), is_liked: value === 1, is_disliked: value === -1 }
-            : post
-        )
-      );
-    } else {
-      setComments(prevComments => {
-        const updatedComments = { ...prevComments };
-        for (const postId in updatedComments) {
-          updatedComments[postId] = updatedComments[postId].map(comment =>
-            comment.id === id
-              ? { ...comment, likes: comment.likes + (value === 1 ? 1 : 0), dislikes: comment.dislikes + (value === -1 ? 1 : 0), is_liked: value === 1, is_disliked: value === -1 }
-              : comment
-          );
-        }
-        return updatedComments;
-      });
+  // Mock data
+  const posts: Post[] = [
+    {
+      id: '1',
+      title: 'How to start a home garden?',
+      content: 'I want to grow my own vegetables but don\'t know where to start...',
+      author: {
+        name: 'Green Thumb',
+        avatar: '/avatar.jpg',
+        reputation: 1250
+      },
+      likes: 45,
+      comments: 12,
+      tags: ['gardening', 'beginner', 'sustainable-living'],
+      createdAt: '2024-03-08T10:00:00Z',
+      isLiked: false
+    },
+    {
+      id: '2',
+      title: 'Solar Panel Installation Guide',
+      content: 'Comprehensive guide on installing solar panels...',
+      author: {
+        name: 'SolarPro',
+        avatar: '/avatar.jpg',
+        reputation: 3420
+      },
+      likes: 89,
+      comments: 34,
+      tags: ['solar', 'energy', 'diy'],
+      createdAt: '2024-03-07T15:30:00Z',
+      isLiked: true
     }
-  };
+  ];
 
-  const handleSave = (type: 'post' | 'comment', id: string) => {
-    if (type === 'post') {
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === id ? { ...post, is_saved: !post.is_saved } : post
-        )
-      );
-    } else {
-      setComments(prevComments => {
-        const updatedComments = { ...prevComments };
-        for (const postId in updatedComments) {
-          updatedComments[postId] = updatedComments[postId].map(comment =>
-            comment.id === id ? { ...comment, is_saved: !comment.is_saved } : comment
-          );
-        }
-        return updatedComments;
-      });
+  const tips: Tip[] = [
+    {
+      id: '1',
+      title: 'Zero Waste Kitchen Guide',
+      description: 'Transform your kitchen into a zero-waste zone with these practical tips.',
+      author: {
+        name: 'EcoChef',
+        avatar: '/avatar.jpg',
+        reputation: 2150
+      },
+      category: 'Kitchen',
+      difficulty: 'Beginner',
+      likes: 156,
+      price: 5,
+      preview: 'Learn how to reduce kitchen waste by 90% with simple changes...'
+    },
+    {
+      id: '2',
+      title: 'Advanced Composting Techniques',
+      description: 'Master the art of composting with advanced methods and tips.',
+      author: {
+        name: 'CompostKing',
+        avatar: '/avatar.jpg',
+        reputation: 4200
+      },
+      category: 'Gardening',
+      difficulty: 'Advanced',
+      likes: 234,
+      price: 10,
+      preview: 'Discover how to create perfect compost in half the time...'
     }
-  };
+  ];
 
-  const handleAward = (type: 'post' | 'comment', id: string, awardType: string) => {
-    // Mock implementation
-    setShowAwardModal(false);
-    setAwardTarget(null);
-  };
+  const contributors: Contributor[] = [
+    {
+      id: '1',
+      name: 'EcoWarrior',
+      avatar: '/avatar.jpg',
+      reputation: 5420,
+      contributions: 156,
+      specialties: ['Solar Energy', 'Zero Waste'],
+      badges: ['Top Contributor', 'Expert']
+    },
+    {
+      id: '2',
+      name: 'GreenGuru',
+      avatar: '/avatar.jpg',
+      reputation: 4850,
+      contributions: 132,
+      specialties: ['Sustainable Living', 'Urban Farming'],
+      badges: ['Community Leader', 'Mentor']
+    }
+  ];
 
-  const handleShare = (type: 'post' | 'comment', id: string) => {
-    // Mock implementation
-    console.log(`Share ${type} with id: ${id}`);
-  };
-
-  const renderComment = (comment: Comment, postId: string) => {
-    const marginLeft = comment.depth * 24;
-    
-    return (
-      <motion.div
-        key={comment.id}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mt-4"
-        style={{ marginLeft }}
-      >
-        <div className="bg-eco-background rounded-lg p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <img
-                src={comment.user.avatar_url}
-                alt={comment.user.name}
-                className="w-8 h-8 rounded-full object-cover"
-              />
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-eco-primary">{comment.user.name}</span>
-                </div>
-                <div className="text-xs text-gray-500">
-                  {new Date(comment.created_at).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {editingComment === comment.id ? (
-                <>
-                  <button
-                    onClick={() => {
-                      handleEditComment(comment.id, postId);
-                    }}
-                    className="text-eco-primary hover:text-eco-secondary"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingComment(null);
-                      setEditedContent('');
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleShare('comment', comment.id)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAwardTarget({ id: comment.id, type: 'comment' });
-                      setShowAwardModal(true);
-                    }}
-                    className="text-gray-400 hover:text-yellow-500"
-                  >
-                    <Award className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setReportItemId(comment.id);
-                      setShowReportModal(true);
-                    }}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <Flag className="h-4 w-4" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {editingComment === comment.id ? (
-            <textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full mt-2 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-            />
-          ) : (
-            <p className="text-gray-700 mt-2">{comment.content}</p>
-          )}
-
-          <div className="flex items-center space-x-4 mt-2">
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={() => handleVote('comment', comment.id, 1)}
-                className={`p-1 rounded ${
-                  comment.is_liked ? 'bg-eco-primary text-white' : 'text-gray-400 hover:bg-gray-100'
-                }`}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </button>
-              <span className="text-sm font-medium">
-                {comment.likes - comment.dislikes}
-              </span>
-              <button
-                onClick={() => handleVote('comment', comment.id, -1)}
-                className={`p-1 rounded ${
-                  comment.is_disliked ? 'bg-red-500 text-white' : 'text-gray-400 hover:bg-gray-100'
-                }`}
-              >
-                <ArrowDown className="h-4 w-4" />
-              </button>
-            </div>
-
-            <button
-              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-              className="text-gray-400 hover:text-eco-primary text-sm"
-            >
-              Reply
-            </button>
-
-            {comment.user_id === 'mock-user-id' && (
-              <>
-                <button
-                  onClick={() => {
-                    setEditingComment(comment.id);
-                    setEditedContent(comment.content);
-                  }}
-                  className="text-gray-400 hover:text-eco-primary text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteComment(comment.id, postId)}
-                  className="text-gray-400 hover:text-red-500 text-sm"
-                >
-                  Delete
-                </button>
-              </>
-            )}
-          </div>
-
-          {replyingTo === comment.id && (
-            <div className="mt-4">
-              <textarea
-                value={newComment[comment.id] || ''}
-                onChange={(e) => setNewComment(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                placeholder="Write a reply..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-eco-primary"
-              />
-              <div className="flex justify-end space-x-2 mt-2">
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="text-gray-600 hover:text-gray-800 px-4 py-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleCreateComment(postId, comment.id)}
-                  className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
-                >
-                  Reply
-                </button>
-              </div>
-            </div>
-          )}
-
-          {comment.replies?.map(reply => renderComment(reply, postId))}
-        </div>
-      </motion.div>
-    );
-  };
-
-  const handleCreateComment = (postId: string, parentId?: string) => {
-    // Mock implementation
-    const content = parentId ? newComment[parentId] : newComment[postId];
-    if (!content?.trim()) return;
-
-    const newCommentData = {
-      id: Math.random().toString(36).substring(2, 15),
-      content,
-      created_at: new Date().toISOString(),
-      user: { name: 'Mock User', avatar_url: '/avatar.jpg' },
-      likes: 0,
-      dislikes: 0,
-      is_liked: false,
-      is_disliked: false,
-      parent_id: parentId,
-      depth: parentId ? (comments[postId]?.find(c => c.id === parentId)?.depth ?? 0) + 1 : 0,
-      replies: []
-    };
-
-    setComments(prevComments => {
-      const updatedComments = { ...prevComments };
-      if (parentId) {
-        const parentComment = updatedComments[postId]?.find(c => c.id === parentId);
-        if (parentComment) {
-          parentComment.replies = [...(parentComment.replies || []), newCommentData];
-        }
-      } else {
-        updatedComments[postId] = [...(updatedComments[postId] || []), newCommentData];
-      }
-      return updatedComments;
-    });
-
-    setNewComment({});
-    setReplyingTo(null);
-  };
-
-  const handleEditComment = (commentId: string, postId: string) => {
-    // Mock implementation
-    setComments(prevComments => {
-      const updatedComments = { ...prevComments };
-      for (const postId in updatedComments) {
-        updatedComments[postId] = updatedComments[postId].map(comment =>
-          comment.id === commentId ? { ...comment, content: editedContent } : comment
-        );
-      }
-      return updatedComments;
-    });
-    setEditingComment(null);
-    setEditedContent('');
-  };
-
-  const handleDeleteComment = (commentId: string, postId: string) => {
-    // Mock implementation
-    setComments(prevComments => {
-      const updatedComments = { ...prevComments };
-      for (const postId in updatedComments) {
-        updatedComments[postId] = updatedComments[postId].filter(comment => comment.id !== commentId);
-      }
-      return updatedComments;
-    });
-  };
-
-  const fetchPosts = (loadMore = false) => {
-    // Mock implementation
-    setLoading(false);
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Community</h1>
-        <p className="mt-2 text-gray-600">Join the discussion and share your thoughts</p>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+  const renderForum = () => (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-grow max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search posts..."
+            placeholder="Search discussions..."
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
           />
         </div>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
-        >
-          <option value="hot">Hot</option>
-          <option value="newest">Newest</option>
-          <option value="top">Top</option>
-          <option value="controversial">Controversial</option>
-        </select>
-
-        <select
-          value={timeFilter}
-          onChange={(e) => setTimeFilter(e.target.value as typeof timeFilter)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
-        >
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-          <option value="year">This Year</option>
-        </select>
-
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
-        >
-          <option value="all">All Categories</option>
-          <option value="general">General</option>
-          <option value="question">Questions</option>
-          <option value="discussion">Discussion</option>
-          <option value="announcement">Announcements</option>
-        </select>
-
         <button
-          onClick={() => setShowNewPostModal(true)}
-          className="ml-auto bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary flex items-center space-x-2"
+          onClick={() => {}}
+          className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary flex items-center space-x-2"
         >
           <Plus className="h-5 w-5" />
-          <span>New Post</span>
+          <span>New Discussion</span>
         </button>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
-          <AlertTriangle className="h-5 w-5" />
-          <span>{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-700"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      )}
-
-      {/* Posts List */}
-      <div className="space-y-6">
-        {posts.map((post, index) => (
-          <div
+      <div className="space-y-4">
+        {posts.map((post) => (
+          <motion.div
             key={post.id}
-            ref={index === posts.length - 1 ? lastPostRef : null}
+            whileHover={{ scale: 1.01 }}
+            className="bg-white rounded-lg shadow-md p-6"
           >
-            {renderPost(post)}
-          </div>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={post.author.avatar}
+                  alt={post.author.name}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div>
+                  <h3 className="font-semibold text-eco-primary">{post.title}</h3>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <span>{post.author.name}</span>
+                    <span>•</span>
+                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button className="text-gray-400 hover:text-eco-primary">
+                  <Share2 className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <p className="mt-3 text-gray-600">{post.content}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {post.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-eco-background rounded-full text-xs text-eco-primary"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center space-x-4 text-sm">
+              <button
+                className={`flex items-center space-x-1 ${
+                  post.isLiked ? 'text-eco-primary' : 'text-gray-400'
+                } hover:text-eco-primary`}
+              >
+                <ThumbsUp className="h-4 w-4" />
+                <span>{post.likes}</span>
+              </button>
+              <button className="flex items-center space-x-1 text-gray-400 hover:text-eco-primary">
+                <MessageSquare className="h-4 w-4" />
+                <span>{post.comments}</span>
+              </button>
+            </div>
+          </motion.div>
         ))}
+      </div>
+    </div>
+  );
 
-        {loading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-eco-primary"></div>
-          </div>
-        )}
+  const renderTips = () => (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-grow max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <input
+            type="text"
+            placeholder="Search tips..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+          />
+        </div>
+        <select className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary">
+          <option value="all">All Categories</option>
+          <option value="kitchen">Kitchen</option>
+          <option value="gardening">Gardening</option>
+          <option value="energy">Energy</option>
+        </select>
       </div>
 
-      {/* Modals */}
-      <AnimatePresence>
-        {showNewPostModal && (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tips.map((tip) => (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => setShowNewPostModal(false)}
+            key={tip.id}
+            whileHover={{ scale: 1.02 }}
+            className="bg-white rounded-lg shadow-md overflow-hidden"
           >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
-            >
-              <h3 className="text-xl font-bold text-eco-primary mb-4">Create New Post</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={newPost.title}
-                    onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  tip.difficulty === 'Beginner' ? 'bg-green-100 text-green-600' :
+                  tip.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-600' :
+                  'bg-red-100 text-red-600'
+                }`}>
+                  {tip.difficulty}
+                </span>
+                <span className="text-eco-primary font-bold">${tip.price}</span>
+              </div>
+              <h3 className="text-lg font-semibold text-eco-primary mb-2">{tip.title}</h3>
+              <p className="text-gray-600 text-sm mb-4">{tip.preview}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={tip.author.avatar}
+                    alt={tip.author.name}
+                    className="w-8 h-8 rounded-full"
                   />
+                  <div className="text-sm">
+                    <p className="font-medium">{tip.author.name}</p>
+                    <p className="text-gray-500">{tip.reputation} rep</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-                  <textarea
-                    value={newPost.content}
-                    onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={newPost.category}
-                    onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
-                  >
-                    <option value="general">General</option>
-                    <option value="question">Question</option>
-                    <option value="discussion">Discussion</option>
-                    <option value="announcement">Announcement</option>
-                  </select>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => setShowNewPostModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPosts(prevPosts => [
-                        {
-                          id: Math.random().toString(36).substring(2, 15),
-                          title: newPost.title,
-                          content: newPost.content,
-                          created_at: new Date().toISOString(),
-                          user: { name: 'Mock User', avatar_url: '/avatar.jpg' },
-                          likes: 0,
-                          dislikes: 0,
-                          comments_count: 0,
-                          is_liked: false,
-                          is_disliked: false,
-                          is_saved: false,
-                          category: newPost.category,
-                          awards: []
-                        },
-                        ...prevPosts
-                      ]);
-                      setShowNewPostModal(false);
-                      setNewPost({ title: '', content: '', category: 'general' });
-                    }}
-                    className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
-                  >
-                    Post
-                  </button>
-                </div>
+                <button className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary">
+                  View Tip
+                </button>
               </div>
-            </motion.div>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        ))}
+      </div>
+    </div>
+  );
 
-      <AnimatePresence>
-        {showReportModal && (
+  const renderContributors = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {contributors.map((contributor) => (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => setShowReportModal(false)}
+            key={contributor.id}
+            whileHover={{ scale: 1.02 }}
+            className="bg-white rounded-lg shadow-md p-6"
           >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
-            >
-              <h3 className="text-xl font-bold text-eco-primary mb-4">Report Content</h3>
-              <div className="space-y-4">
-                <textarea
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  placeholder="Reason for reporting..."
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary h-32"
-                />
-                <div className="flex justify-end space-x-2">
-                  <button
-                    onClick={() => setShowReportModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowReportModal(false);
-                      setReportReason('');
-                      setReportItemId(null);
-                    }}
-                    className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary"
-                  >
-                    Submit Report
-                  </button>
-                </div>
+            <div className="flex items-center space-x-4">
+              <img
+                src={contributor.avatar}
+                alt={contributor.name}
+                className="w-16 h-16 rounded-full"
+              />
+              <div>
+                <h3 className="font-semibold text-eco-primary">{contributor.name}</h3>
+                <p className="text-sm text-gray-500">{contributor.reputation} reputation</p>
               </div>
-            </motion.div>
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Trophy className="h-4 w-4 text-eco-secondary" />
+                <span>{contributor.contributions} contributions</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {contributor.specialties.map((specialty) => (
+                  <span
+                    key={specialty}
+                    className="px-2 py-1 bg-eco-background rounded-full text-xs text-eco-primary"
+                  >
+                    {specialty}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {contributor.badges.map((badge) => (
+                  <span
+                    key={badge}
+                    className="px-2 py-1 bg-eco-accent/20 rounded-full text-xs text-eco-primary font-medium"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        ))}
+      </div>
+    </div>
+  );
 
-      <AnimatePresence>
-        {showAwardModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-            onClick={() => setShowAwardModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
-            >
-              <h3 className="text-xl font-bold text-eco-primary mb-4">Give an Award</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  {['helpful', 'insightful', 'inspiring'].map(awardType => (
-                    <button
-                      key={awardType}
-                      onClick={() => {
-                        if (awardTarget) {
-                          handleAward(awardTarget.type, awardTarget.id, awardType);
-                        }
-                      }}
-                      className="bg-eco-background p-4 rounded-lg hover:bg-eco-accent/20 transition-colors"
-                    >
-                      <span className="capitalize">{awardType}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setShowAwardModal(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-eco-primary">Community</h1>
+        <p className="mt-2 text-gray-600">Connect, share, and learn with fellow eco-warriors</p>
+      </div>
+
+      <div className="flex space-x-1 bg-eco-background p-1 rounded-lg mb-8">
+        <button
+          onClick={() => setActiveTab('forum')}
+          className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'forum'
+              ? 'bg-white text-eco-primary shadow-sm'
+              : 'text-gray-600 hover:text-eco-primary'
+          }`}
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span>Forum</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('tips')}
+          className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'tips'
+              ? 'bg-white text-eco-primary shadow-sm'
+              : 'text-gray-600 hover:text-eco-primary'
+          }`}
+        >
+          <Lightbulb className="h-5 w-5" />
+          <span>Tips Marketplace</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('contributors')}
+          className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'contributors'
+              ? 'bg-white text-eco-primary shadow-sm'
+              : 'text-gray-600 hover:text-eco-primary'
+          }`}
+        >
+          <Users className="h-5 w-5" />
+          <span>Top Contributors</span>
+        </button>
+      </div>
+
+      {activeTab === 'forum' && renderForum()}
+      {activeTab === 'tips' && renderTips()}
+      {activeTab === 'contributors' && renderContributors()}
     </div>
   );
 };
