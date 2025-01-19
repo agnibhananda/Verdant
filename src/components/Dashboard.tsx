@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Target, Users, TreePine, Zap, Wind, Trash2, X } from 'lucide-react';
 import { CarbonTracker } from './CarbonTracker';
+import { AirQualityMonitor } from './AirQualityMonitor';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -82,17 +83,10 @@ const Dashboard = () => {
         <div className="lg:col-span-2">
           <CarbonTracker />
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4 md:space-y-6"
-        >
-          {/* Rest of the dashboard content */}
-        </motion.div>
+        <div className="space-y-4 md:space-y-6">
+          <AirQualityMonitor />
+        </div>
       </div>
-
-      {/* Modals remain unchanged as they are already responsive */}
     </div>
   );
 };
