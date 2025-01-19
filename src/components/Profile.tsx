@@ -8,14 +8,14 @@ const Profile = () => {
   const [profileImage, setProfileImage] = useState<string>("https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150");
   
   const [userProfile, setUserProfile] = useState({
-    name: 'Jane Green',
+    name: 'Agnibha Nanda',
     badge: 'Earth Guardian',
-    points: 2450,
-    joinDate: 'January 2024',
+    points: 420,
+    joinDate: 'January 2025',
     completedChallenges: 12,
     currentStreak: 15,
     bio: 'Passionate about environmental conservation and sustainable living.',
-    email: 'jane.green@example.com'
+    email: 'agnibhananda@gmail.com'
   });
 
   const [editableProfile, setEditableProfile] = useState({ ...userProfile });
