@@ -46,12 +46,6 @@ function App() {
     setShowOnboarding(false);
   };
 
-  const pageVariants = {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: 20 }
-  };
-
   if (loading) {
     return <LoadingScreen />;
   }
@@ -98,62 +92,13 @@ function App() {
             <main className="container mx-auto px-4 py-4 md:py-8">
               <AnimatePresence mode="wait">
                 <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      <motion.div
-                        key="dashboard"
-                        variants={pageVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                      >
-                        <Dashboard />
-                      </motion.div>
-                    }
-                  />
-                  <Route
-                    path="/challenges"
-                    element={
-                      <motion.div
-                        key="challenges"
-                        variants={pageVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                      >
-                        <Challenges />
-                      </motion.div>
-                    }
-                  />
-                  <Route
-                    path="/community"
-                    element={
-                      <motion.div
-                        key="community"
-                        variants={pageVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                      >
-                        <Community />
-                      </motion.div>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <motion.div
-                        key="profile"
-                        variants={pageVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                      >
-                        <Profile />
-                      </motion.div>
-                    }
-                  />
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/challenges" element={<Challenges />} />
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/community/forum" element={<Community />} />
+                  <Route path="/community/post/:id" element={<Community />} />
+                  <Route path="/community/tips" element={<Community />} />
+                  <Route path="/profile" element={<Profile />} />
                 </Routes>
               </AnimatePresence>
             </main>
