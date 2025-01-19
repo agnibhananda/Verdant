@@ -16,11 +16,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
 
     try {
       if (isLogin) {
@@ -35,13 +37,14 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           email,
           password,
           options: {
-            data: {
-              name,
-            },
-          },
+            data: { name },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          }
         });
+        
         if (error) throw error;
-        setShowProfileSetup(true);
+        
+        setMessage('Please check your email for the confirmation link.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -50,24 +53,43 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     }
   };
 
-  const handleProfileSetupComplete = () => {
-    setShowProfileSetup(false);
-    onAuthSuccess();
-  };
+  const handleProfileSetupComplete = async (data: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
 
-  const handleProfileSetupSkip = () => {
-    setShowProfileSetup(false);
-    onAuthSuccess();
-  };
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name: data.name,
+          bio: data.bio
+        });
 
-  if (showProfileSetup) {
-    return (
-      <ProfileSetup
-        onComplete={handleProfileSetupComplete}
-        onSkip={handleProfileSetupSkip}
-      />
-    );
-  }
+      if (profileError) throw profileError;
+
+      // Create initial carbon footprint
+      const { error: carbonError } = await supabase
+        .from('carbon_footprints')
+        .insert({
+          user_id: user.id,
+          transport_mode: 'car',
+          transport_distance: 'medium',
+          energy_usage: 'medium',
+          energy_renewable: false,
+          waste_recycling: false,
+          waste_composting: false
+        });
+
+      if (carbonError) throw carbonError;
+
+      setShowProfileSetup(false);
+      onAuthSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete profile setup');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-eco-background flex items-center justify-center p-4">
@@ -96,6 +118,16 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           >
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
+          </motion.div>
+        )}
+
+        {message && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-green-50 text-green-600 p-3 rounded-lg mb-4"
+          >
+            {message}
           </motion.div>
         )}
 
@@ -161,7 +193,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError(null);
+              setMessage(null);
+            }}
             className="text-eco-primary hover:text-eco-secondary transition-colors"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
