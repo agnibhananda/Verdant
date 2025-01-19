@@ -24,30 +24,34 @@ export const AirQualityMonitor = () => {
   useEffect(() => {
     const fetchAirQuality = async () => {
       try {
-        const response = await fetch(
-          'https://api.openaq.org/v2/latest?limit=5&parameter=pm25&has_geo=true&api_key=d80e4819a8c713b537e2a96d4941750098b25db2e7aa46e49616932ada8b627c'
+        // Using the specific locations endpoint
+        const locationIds = [8118, 8119, 8120, 8121, 8122]; // Example location IDs
+        const dataPromises = locationIds.map(id => 
+          fetch(`https://api.openaq.org/v3/locations/${id}`, {
+            headers: {
+              'X-API-Key': 'd80e4819a8c713b537e2a96d4941750098b25db2e7aa46e49616932ada8b627c'
+            }
+          }).then(res => res.json())
         );
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch air quality data');
-        }
 
-        const data = await response.json();
+        const responses = await Promise.all(dataPromises);
         
-        if (!data.results || !Array.isArray(data.results)) {
-          throw new Error('Invalid data format received from API');
-        }
-
-        const formattedData = data.results
-          .filter(result => result.measurements && result.measurements.length > 0)
-          .map(result => ({
-            location: result.location,
-            city: result.city || 'Unknown City',
-            parameter: result.measurements[0].parameter,
-            value: result.measurements[0].value,
-            unit: result.measurements[0].unit,
-            lastUpdated: new Date(result.measurements[0].lastUpdated).toLocaleString()
-          }));
+        const formattedData = responses
+          .filter(data => data && data.results)
+          .map(data => {
+            const result = data.results;
+            const pm25Data = result.parameters?.find(param => param.parameter === 'pm25');
+            
+            return {
+              location: result.name || 'Unknown Location',
+              city: result.city || 'Unknown City',
+              parameter: 'pm25',
+              value: pm25Data ? pm25Data.lastValue : 0,
+              unit: pm25Data ? pm25Data.unit : 'µg/m³',
+              lastUpdated: pm25Data ? new Date(pm25Data.lastUpdatedUTC).toLocaleString() : 'N/A'
+            };
+          })
+          .filter(item => item.value > 0);
 
         if (formattedData.length === 0) {
           throw new Error('No air quality data available');
