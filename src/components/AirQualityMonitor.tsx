@@ -24,7 +24,7 @@ export const AirQualityMonitor = () => {
     const fetchAirQuality = async () => {
       try {
         // Using major cities as examples
-        const cities = ['delhi', 'noida', ];
+        const cities = ['delhi' ];
         const dataPromises = cities.map(city => 
           fetch(`https://api.waqi.info/feed/${city}/?token=2ddf41378f91f1474516928a64a3650ed2e2fc85`)
             .then(res => res.json())
