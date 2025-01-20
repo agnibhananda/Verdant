@@ -1,27 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MessageSquare, 
-  Users, 
-  Trophy,
-  Share2, 
-  ThumbsUp,
-  Plus,
-  Search,
-  Filter,
-  ArrowUp,
-  Award,
-  Lightbulb,
-  Star,
-  Heart,
-  BookOpen,
-  X,
-  Send,
-  Leaf,
-  Zap,
-  Recycle,
-  DollarSign
-} from 'lucide-react';
+import { MessageSquare, Users, Trophy, Share2, ThumbsUp, Plus, Search, Filter, ArrowUp, Award, Lightbulb, Star, Heart, BookOpen, X, Send, Leaf, Zap, Recycle, DollarSign, Trees as Tree, Droplet, Wind } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { ForumPost, ForumComment } from '../types/forum';
 
@@ -70,6 +49,79 @@ const Community = () => {
       icon: Leaf,
       likes: 178,
       description: 'Create your own sustainable garden with native plants and water-saving techniques.'
+    },
+    {
+      id: '4',
+      title: 'DIY Natural Cleaning Products',
+      author: 'EcoClean',
+      points: 150,
+      category: 'Lifestyle',
+      icon: Droplet,
+      likes: 145,
+      description: 'Make your own eco-friendly cleaning products using natural ingredients.'
+    },
+    {
+      id: '5',
+      title: 'Smart Water Conservation',
+      author: 'WaterWise',
+      points: 275,
+      category: 'Water',
+      icon: Wind,
+      likes: 189,
+      description: 'Innovative ways to reduce water consumption in your daily life.'
+    }
+  ];
+
+  const topContributors = [
+    {
+      id: '1',
+      name: 'Sarah Green',
+      avatar: 'https://i.pravatar.cc/150?img=1',
+      points: 2500,
+      badge: 'Earth Guardian',
+      contributions: 156,
+      specialties: ['Energy', 'Waste'],
+      icon: Tree
+    },
+    {
+      id: '2',
+      name: 'Michael Rivers',
+      avatar: 'https://i.pravatar.cc/150?img=2',
+      points: 2100,
+      badge: 'Climate Champion',
+      contributions: 142,
+      specialties: ['Water', 'Transport'],
+      icon: Droplet
+    },
+    {
+      id: '3',
+      name: 'Emma Woods',
+      avatar: 'https://i.pravatar.cc/150?img=3',
+      points: 1950,
+      badge: 'Eco Warrior',
+      contributions: 128,
+      specialties: ['Gardening', 'Food'],
+      icon: Leaf
+    },
+    {
+      id: '4',
+      name: 'David Sun',
+      avatar: 'https://i.pravatar.cc/150?img=4',
+      points: 1800,
+      badge: 'Energy Master',
+      contributions: 115,
+      specialties: ['Solar', 'Technology'],
+      icon: Zap
+    },
+    {
+      id: '5',
+      name: 'Lisa Waters',
+      avatar: 'https://i.pravatar.cc/150?img=5',
+      points: 1650,
+      badge: 'Waste Warrior',
+      contributions: 98,
+      specialties: ['Zero Waste', 'Recycling'],
+      icon: Recycle
     }
   ];
 
@@ -123,6 +175,7 @@ const Community = () => {
                       <div>
                         <h3 className="font-semibold text-eco-primary">{tip.title}</h3>
                         <p className="text-sm text-gray-600 mt-1">{tip.description}</p>
+                        <p className="text-xs text-eco-secondary mt-1">By {tip.author}</p>
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-4">
@@ -180,7 +233,51 @@ const Community = () => {
 
           {activeTab === 'contributors' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Contributors would be rendered here */}
+              {topContributors.map((contributor) => {
+                const Icon = contributor.icon;
+                return (
+                  <motion.div
+                    key={contributor.id}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-eco-background p-4 rounded-lg"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <img
+                        src={contributor.avatar}
+                        alt={contributor.name}
+                        className="w-12 h-12 rounded-full"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-eco-primary">{contributor.name}</h3>
+                        <div className="flex items-center space-x-1 text-xs text-eco-secondary">
+                          <Icon className="h-3 w-3" />
+                          <span>{contributor.badge}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Points:</span>
+                        <span className="font-medium">{contributor.points}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Contributions:</span>
+                        <span className="font-medium">{contributor.contributions}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {contributor.specialties.map((specialty, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-white px-2 py-1 rounded-full text-eco-primary"
+                          >
+                            {specialty}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </div>
