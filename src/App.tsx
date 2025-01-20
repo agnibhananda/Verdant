@@ -7,6 +7,7 @@ import Challenges from './components/Challenges';
 import Community from './components/Community';
 import Profile from './components/Profile';
 import { LoadingScreen } from './components/LoadingScreen';
+import { Auth } from './components/Auth';
 import { supabase } from './lib/supabase';
 
 function App() {
