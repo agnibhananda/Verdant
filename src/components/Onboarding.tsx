@@ -20,7 +20,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
     },
     home: {
       houseType: '',
-      occupants: '1', // Changed to string to handle input value properly
+      occupants: '1',
       renewable: false
     },
     consumption: {
@@ -70,7 +70,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
 
   const handleNext = () => {
     if (step === steps.length - 1) {
-      // Convert occupants back to number before submitting
       const submissionData = {
         ...formData,
         home: {
@@ -90,7 +89,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
 
   const handleOccupantsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Only allow positive numbers
     if (value === '' || parseInt(value, 10) > 0) {
       setFormData(prev => ({
         ...prev,
@@ -103,10 +101,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
     switch (steps[step].type) {
       case 'welcome':
         return (
-          <div className="text-center space-y-6">
-            <img src="/logo.png" alt="Verdant Logo" className="w-24 h-24 mx-auto" />
-            <h2 className="text-2xl font-bold text-eco-primary">Welcome to Verdant</h2>
-            <p className="text-gray-600">
+          <div className="text-center space-y-6 px-4">
+            <img src="/logo.png" alt="Verdant Logo" className="w-20 h-20 md:w-24 md:h-24 mx-auto" />
+            <h2 className="text-xl md:text-2xl font-bold text-eco-primary">Welcome to Verdant</h2>
+            <p className="text-sm md:text-base text-gray-600">
               Join our community of eco-conscious individuals making a difference.
               Let's start by understanding your current lifestyle.
             </p>
@@ -115,8 +113,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
 
       case 'transport':
         return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {Object.entries(formData.transport).map(([key, value]) => (
                 <button
                   key={key}
@@ -137,7 +135,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
 
       case 'home':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             <select
               value={formData.home.houseType}
               onChange={(e) => setFormData(prev => ({
@@ -152,7 +150,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
               <option value="condo">Condo</option>
             </select>
             <div className="flex items-center justify-between">
-              <span>Number of occupants:</span>
+              <span className="text-sm md:text-base">Number of occupants:</span>
               <input
                 type="number"
                 min="1"
@@ -170,16 +168,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
                   home: { ...prev.home, renewable: e.target.checked }
                 }))}
               />
-              <span>I use renewable energy</span>
+              <span className="text-sm md:text-base">I use renewable energy</span>
             </label>
           </div>
         );
 
       case 'consumption':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             <div className="space-y-2">
-              <label className="block">Meat consumption:</label>
+              <label className="block text-sm md:text-base">Meat consumption:</label>
               <select
                 value={formData.consumption.meatConsumption}
                 onChange={(e) => setFormData(prev => ({
@@ -194,7 +192,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="block">Shopping frequency:</label>
+              <label className="block text-sm md:text-base">Shopping frequency:</label>
               <select
                 value={formData.consumption.shopping}
                 onChange={(e) => setFormData(prev => ({
@@ -217,14 +215,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
                   consumption: { ...prev.consumption, recycling: e.target.checked }
                 }))}
               />
-              <span>I regularly recycle</span>
+              <span className="text-sm md:text-base">I regularly recycle</span>
             </label>
           </div>
         );
 
       case 'dataSources':
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             {Object.entries(formData.dataSources).map(([key, value]) => (
               <label key={key} className="flex items-center space-x-2">
                 <input
@@ -235,10 +233,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
                     dataSources: { ...prev.dataSources, [key]: e.target.checked }
                   }))}
                 />
-                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                <span className="text-sm md:text-base capitalize">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </span>
               </label>
             ))}
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-xs md:text-sm text-gray-600 mt-2">
               Connecting data sources helps us provide more accurate recommendations
             </p>
           </div>
@@ -256,16 +256,16 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full"
+        className="bg-white rounded-lg shadow-xl p-4 md:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-2">
             <div className="p-2 bg-eco-accent rounded-lg">
-              <StepIcon className="h-6 w-6 text-eco-primary" />
+              <StepIcon className="h-5 w-5 md:h-6 md:w-6 text-eco-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-eco-primary">{steps[step].title}</h3>
-              <p className="text-sm text-gray-600">{steps[step].description}</p>
+              <h3 className="text-lg md:text-xl font-bold text-eco-primary">{steps[step].title}</h3>
+              <p className="text-xs md:text-sm text-gray-600">{steps[step].description}</p>
             </div>
           </div>
           {step > 0 && (
@@ -273,7 +273,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
               onClick={onSkip}
               className="text-gray-400 hover:text-gray-600"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
           )}
         </div>
@@ -282,12 +282,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
           {renderStepContent()}
         </div>
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center px-4">
           <div className="flex space-x-1">
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`h-1 w-8 rounded-full ${
+                className={`h-1 w-6 md:w-8 rounded-full ${
                   index === step ? 'bg-eco-primary' : 'bg-gray-200'
                 }`}
               />
@@ -300,7 +300,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>Back</span>
+                <span className="hidden md:inline">Back</span>
               </button>
             )}
             <button
