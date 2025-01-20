@@ -13,7 +13,7 @@ import { supabase } from './lib/supabase';
 
 function App() {
   const [loading, setLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  // const [showOnboarding, setShowOnboarding] = useState(false);
   const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
@@ -33,14 +33,14 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleAuthSuccess = () => {
-    setShowOnboarding(true);
-  };
+  // const handleAuthSuccess = () => {
+  //   setShowOnboarding(true);
+  //};
 
-  const handleOnboardingComplete = (data: any) => {
-    console.log('Onboarding completed:', data);
-    setShowOnboarding(false);
-  };
+  // const handleOnboardingComplete = (data: any) => {
+  //   console.log('Onboarding completed:', data);
+  //   setShowOnboarding(false);
+  // };
 
   const handleOnboardingSkip = () => {
     setShowOnboarding(false);
@@ -57,10 +57,10 @@ function App() {
   return (
     <Router>
       <AnimatePresence>
-        {showOnboarding ? (
+        {/* {showOnboarding ? (
           <Onboarding
             onComplete={handleOnboardingComplete}
-            onSkip={handleOnboardingSkip}
+            onSkip={handleOnboardingSkip} */}
           />
         ) : (
           <motion.div
