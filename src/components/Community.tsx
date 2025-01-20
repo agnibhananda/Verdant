@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, 
@@ -14,143 +14,293 @@ import {
   Lightbulb,
   Star,
   Heart,
-  BookOpen
+  BookOpen,
+  X,
+  Send
 } from 'lucide-react';
-
-interface Post {
-  id: string;
-  title: string;
-  content: string;
-  author: {
-    name: string;
-    avatar: string;
-    reputation: number;
-  };
-  likes: number;
-  comments: number;
-  tags: string[];
-  createdAt: string;
-  isLiked: boolean;
-}
-
-interface Tip {
-  id: string;
-  title: string;
-  description: string;
-  author: {
-    name: string;
-    avatar: string;
-    reputation: number;
-  };
-  category: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  likes: number;
-  price: number;
-  preview: string;
-}
-
-interface Contributor {
-  id: string;
-  name: string;
-  avatar: string;
-  reputation: number;
-  contributions: number;
-  specialties: string[];
-  badges: string[];
-}
+import { supabase } from '../lib/supabase';
+import type { ForumPost, ForumComment } from '../types/forum';
 
 const Community = () => {
   const [activeTab, setActiveTab] = useState<'forum' | 'tips' | 'contributors'>('forum');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showNewPostModal, setShowNewPostModal] = useState(false);
+  const [newPost, setNewPost] = useState({
+    title: '',
+    content: '',
+    tags: [] as string[]
+  });
+  const [selectedPost, setSelectedPost] = useState<ForumPost | null>(null);
+  const [comments, setComments] = useState<ForumComment[]>([]);
+  const [newComment, setNewComment] = useState('');
 
-  // Mock data
-  const posts: Post[] = [
-    {
-      id: '1',
-      title: 'How to start a home garden?',
-      content: 'I want to grow my own vegetables but don\'t know where to start...',
-      author: {
-        name: 'Green Thumb',
-        avatar: '/avatar.jpg',
-        reputation: 1250
-      },
-      likes: 45,
-      comments: 12,
-      tags: ['gardening', 'beginner', 'sustainable-living'],
-      createdAt: '2024-03-08T10:00:00Z',
-      isLiked: false
-    },
-    {
-      id: '2',
-      title: 'Solar Panel Installation Guide',
-      content: 'Comprehensive guide on installing solar panels...',
-      author: {
-        name: 'SolarPro',
-        avatar: '/avatar.jpg',
-        reputation: 3420
-      },
-      likes: 89,
-      comments: 34,
-      tags: ['solar', 'energy', 'diy'],
-      createdAt: '2024-03-07T15:30:00Z',
-      isLiked: true
-    }
-  ];
+  useEffect(() => {
+    fetchPosts();
+  }, [searchQuery, selectedCategory]);
 
-  const tips: Tip[] = [
-    {
-      id: '1',
-      title: 'Zero Waste Kitchen Guide',
-      description: 'Transform your kitchen into a zero-waste zone with these practical tips.',
-      author: {
-        name: 'EcoChef',
-        avatar: '/avatar.jpg',
-        reputation: 2150
-      },
-      category: 'Kitchen',
-      difficulty: 'Beginner',
-      likes: 156,
-      price: 5,
-      preview: 'Learn how to reduce kitchen waste by 90% with simple changes...'
-    },
-    {
-      id: '2',
-      title: 'Advanced Composting Techniques',
-      description: 'Master the art of composting with advanced methods and tips.',
-      author: {
-        name: 'CompostKing',
-        avatar: '/avatar.jpg',
-        reputation: 4200
-      },
-      category: 'Gardening',
-      difficulty: 'Advanced',
-      likes: 234,
-      price: 10,
-      preview: 'Discover how to create perfect compost in half the time...'
-    }
-  ];
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('forum_posts')
+        .select(`
+          *,
+          post_likes (
+            user_id
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  const contributors: Contributor[] = [
-    {
-      id: '1',
-      name: 'EcoWarrior',
-      avatar: '/avatar.jpg',
-      reputation: 5420,
-      contributions: 156,
-      specialties: ['Solar Energy', 'Zero Waste'],
-      badges: ['Top Contributor', 'Expert']
-    },
-    {
-      id: '2',
-      name: 'GreenGuru',
-      avatar: '/avatar.jpg',
-      reputation: 4850,
-      contributions: 132,
-      specialties: ['Sustainable Living', 'Urban Farming'],
-      badges: ['Community Leader', 'Mentor']
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+      }
+
+      if (selectedCategory !== 'all') {
+        query = query.contains('tags', [selectedCategory]);
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const postsWithLikes = data?.map(post => ({
+        ...post,
+        isLiked: post.post_likes?.some(like => like.user_id === user?.id)
+      }));
+
+      setPosts(postsWithLikes || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching posts');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleCreatePost = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('forum_posts')
+        .insert({
+          title: newPost.title,
+          content: newPost.content,
+          tags: newPost.tags,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPosts(prev => [data, ...prev]);
+      setShowNewPostModal(false);
+      setNewPost({ title: '', content: '', tags: [] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error creating post');
+    }
+  };
+
+  const handleLikePost = async (postId: string, isLiked: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      if (isLiked) {
+        await supabase
+          .from('post_likes')
+          .delete()
+          .match({ post_id: postId, user_id: user.id });
+      } else {
+        await supabase
+          .from('post_likes')
+          .insert({ post_id: postId, user_id: user.id });
+      }
+
+      // Update local state
+      setPosts(prev => prev.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            likes: isLiked ? post.likes - 1 : post.likes + 1,
+            isLiked: !isLiked
+          };
+        }
+        return post;
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating like');
+    }
+  };
+
+  const fetchComments = async (postId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('forum_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setComments(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching comments');
+    }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('forum_comments')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          content: newComment
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setComments(prev => [...prev, data]);
+      setNewComment('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error adding comment');
+    }
+  };
+
+  const renderNewPostModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-lg p-6 max-w-lg w-full"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-eco-primary">Create New Post</h3>
+          <button
+            onClick={() => setShowNewPostModal(false)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Post title"
+            value={newPost.title}
+            onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-eco-primary"
+          />
+
+          <textarea
+            placeholder="Write your post..."
+            value={newPost.content}
+            onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+            className="w-full p-2 border rounded-lg h-32 focus:ring-2 focus:ring-eco-primary"
+          />
+
+          <div>
+            <input
+              type="text"
+              placeholder="Add tags (comma separated)"
+              onChange={(e) => setNewPost(prev => ({
+                ...prev,
+                tags: e.target.value.split(',').map(tag => tag.trim())
+              }))}
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-eco-primary"
+            />
+          </div>
+
+          <button
+            onClick={handleCreatePost}
+            className="w-full bg-eco-primary text-white py-2 rounded-lg hover:bg-eco-secondary"
+          >
+            Create Post
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  const renderPostDetails = () => {
+    if (!selectedPost) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-eco-primary">{selectedPost.title}</h3>
+            <button
+              onClick={() => setSelectedPost(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <p className="text-gray-600">{selectedPost.content}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {selectedPost.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-eco-background rounded-full text-xs text-eco-primary"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-semibold text-eco-primary">Comments</h4>
+            {comments.map((comment) => (
+              <div key={comment.id} className="bg-eco-background p-4 rounded-lg">
+                <p className="text-gray-600">{comment.content}</p>
+                <div className="mt-2 text-sm text-gray-500">
+                  {new Date(comment.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-eco-primary"
+              />
+              <button
+                onClick={() => handleAddComment(selectedPost.id)}
+                className="bg-eco-primary text-white p-2 rounded-lg hover:bg-eco-secondary"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   const renderForum = () => (
     <div className="space-y-6">
@@ -166,7 +316,7 @@ const Community = () => {
           />
         </div>
         <button
-          onClick={() => {}}
+          onClick={() => setShowNewPostModal(true)}
           className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary flex items-center space-x-2"
         >
           <Plus className="h-5 w-5" />
@@ -174,177 +324,58 @@ const Community = () => {
         </button>
       </div>
 
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <motion.div
-            key={post.id}
-            whileHover={{ scale: 1.01 }}
-            className="bg-white rounded-lg shadow-md p-6"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={post.author.avatar}
-                  alt={post.author.name}
-                  className="w-10 h-10 rounded-full"
-                />
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eco-primary mx-auto"></div>
+          <p className="text-gray-600 mt-2">Loading posts...</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <motion.div
+              key={post.id}
+              whileHover={{ scale: 1.01 }}
+              className="bg-white rounded-lg shadow-md p-6 cursor-pointer"
+              onClick={() => {
+                setSelectedPost(post);
+                fetchComments(post.id);
+              }}
+            >
+              <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-semibold text-eco-primary">{post.title}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <span>{post.author.name}</span>
-                    <span>•</span>
-                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                  <div className="text-sm text-gray-500">
+                    {new Date(post.created_at).toLocaleDateString()}
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button className="text-gray-400 hover:text-eco-primary">
-                  <Share2 className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <p className="mt-3 text-gray-600">{post.content}</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 bg-eco-background rounded-full text-xs text-eco-primary"
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLikePost(post.id, post.isLiked || false);
+                  }}
+                  className={`flex items-center space-x-1 ${
+                    post.isLiked ? 'text-eco-primary' : 'text-gray-400'
+                  } hover:text-eco-primary`}
                 >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-            <div className="mt-4 flex items-center space-x-4 text-sm">
-              <button
-                className={`flex items-center space-x-1 ${
-                  post.isLiked ? 'text-eco-primary' : 'text-gray-400'
-                } hover:text-eco-primary`}
-              >
-                <ThumbsUp className="h-4 w-4" />
-                <span>{post.likes}</span>
-              </button>
-              <button className="flex items-center space-x-1 text-gray-400 hover:text-eco-primary">
-                <MessageSquare className="h-4 w-4" />
-                <span>{post.comments}</span>
-              </button>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderTips = () => (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-grow max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search tips..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary"
-          />
-        </div>
-        <select className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eco-primary">
-          <option value="all">All Categories</option>
-          <option value="kitchen">Kitchen</option>
-          <option value="gardening">Gardening</option>
-          <option value="energy">Energy</option>
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tips.map((tip) => (
-          <motion.div
-            key={tip.id}
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-md overflow-hidden"
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  tip.difficulty === 'Beginner' ? 'bg-green-100 text-green-600' :
-                  tip.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-600' :
-                  'bg-red-100 text-red-600'
-                }`}>
-                  {tip.difficulty}
-                </span>
-                <span className="text-eco-primary font-bold">${tip.price}</span>
-              </div>
-              <h3 className="text-lg font-semibold text-eco-primary mb-2">{tip.title}</h3>
-              <p className="text-gray-600 text-sm mb-4">{tip.preview}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <img
-                    src={tip.author.avatar}
-                    alt={tip.author.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <div className="text-sm">
-                    <p className="font-medium">{tip.author.name}</p>
-                    <p className="text-gray-500">{tip.reputation} rep</p>
-                  </div>
-                </div>
-                <button className="bg-eco-primary text-white px-4 py-2 rounded-lg hover:bg-eco-secondary">
-                  View Tip
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>{post.likes}</span>
                 </button>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderContributors = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {contributors.map((contributor) => (
-          <motion.div
-            key={contributor.id}
-            whileHover={{ scale: 1.02 }}
-            className="bg-white rounded-lg shadow-md p-6"
-          >
-            <div className="flex items-center space-x-4">
-              <img
-                src={contributor.avatar}
-                alt={contributor.name}
-                className="w-16 h-16 rounded-full"
-              />
-              <div>
-                <h3 className="font-semibold text-eco-primary">{contributor.name}</h3>
-                <p className="text-sm text-gray-500">{contributor.reputation} reputation</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Trophy className="h-4 w-4 text-eco-secondary" />
-                <span>{contributor.contributions} contributions</span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {contributor.specialties.map((specialty) => (
+              <p className="mt-2 text-gray-600 line-clamp-2">{post.content}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {post.tags.map((tag) => (
                   <span
-                    key={specialty}
+                    key={tag}
                     className="px-2 py-1 bg-eco-background rounded-full text-xs text-eco-primary"
                   >
-                    {specialty}
+                    #{tag}
                   </span>
                 ))}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {contributor.badges.map((badge) => (
-                  <span
-                    key={badge}
-                    className="px-2 py-1 bg-eco-accent/20 rounded-full text-xs text-eco-primary font-medium"
-                  >
-                    {badge}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -392,8 +423,8 @@ const Community = () => {
       </div>
 
       {activeTab === 'forum' && renderForum()}
-      {activeTab === 'tips' && renderTips()}
-      {activeTab === 'contributors' && renderContributors()}
+      {showNewPostModal && renderNewPostModal()}
+      {selectedPost && renderPostDetails()}
     </div>
   );
 };
