@@ -14,7 +14,7 @@ const Profile = () => {
     joinDate: 'January 2025',
     completedChallenges: 12,
     currentStreak: 15,
-    bio: 'Passionate about environmental conservation and sustainable living.',
+    bio: 'i like to build cool stuff',
     email: 'agnibhananda@gmail.com'
   });
 
