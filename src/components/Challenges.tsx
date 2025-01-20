@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award, Upload, Star } from 'lucide-react';
+import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award, Upload, Star, Info, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Challenges = () => {
   const [joinedChallenges, setJoinedChallenges] = useState<string[]>([]);
   const [selectedChallenge, setSelectedChallenge] = useState<any>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [verificationData, setVerificationData] = useState<Record<string, { 
     status: string; 
     photo: string | null;
@@ -38,6 +39,12 @@ const Challenges = () => {
         'Install water-efficient fixtures',
         'Fix leaky faucets',
         'Collect rainwater for plants'
+      ],
+      instructions: [
+        'Take a photo of your water meter at the start',
+        'Document water-saving methods daily',
+        'Share your progress in the community forum',
+        'Submit final water meter reading'
       ]
     },
     {
@@ -65,6 +72,12 @@ const Challenges = () => {
         'Plan activities in advance',
         'Use natural light',
         'Try meditation or reading'
+      ],
+      instructions: [
+        'Choose one evening per week',
+        'Turn off all non-essential electronics',
+        'Document your activities with photos',
+        'Share your experience with the community'
       ]
     },
     {
@@ -92,6 +105,12 @@ const Challenges = () => {
         'Use reusable containers',
         'Shop at bulk stores',
         'Start composting'
+      ],
+      instructions: [
+        'Collect and categorize your waste',
+        'Take daily photos of waste reduction efforts',
+        'Document alternatives used',
+        'Share tips and challenges faced'
       ]
     }
   ];
@@ -142,13 +161,88 @@ const Challenges = () => {
         }
       };
     });
-
-    // Add points for completing a review
-    if (verificationData[challengeId]?.reviewsDone === 2) {
-      // User completed 3 reviews, award 10 points
-      console.log('Awarded 10 points for completing 3 reviews');
-    }
   };
+
+  const renderInstructionsModal = (challenge: any) => (
+    <AnimatePresence>
+      {showInstructions && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-eco-primary">{challenge.title} Instructions</h3>
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-semibold text-eco-primary mb-2">Step-by-Step Guide</h4>
+                <ol className="space-y-3">
+                  {challenge.instructions.map((instruction: string, index: number) => (
+                    <li key={index} className="flex items-start space-x-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-eco-accent rounded-full flex items-center justify-center text-eco-primary font-semibold">
+                        {index + 1}
+                      </span>
+                      <span className="text-gray-600">{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-eco-primary mb-2">Helpful Tips</h4>
+                <ul className="space-y-2">
+                  {challenge.tips.map((tip: string, index: number) => (
+                    <li key={index} className="flex items-center space-x-2 text-gray-600">
+                      <Star className="h-4 w-4 text-eco-secondary" />
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-eco-primary mb-2">Verification Requirements</h4>
+                <ul className="space-y-2">
+                  {challenge.requirements.map((req: string, index: number) => (
+                    <li key={index} className="flex items-center space-x-2 text-gray-600">
+                      <CheckCircle className="h-4 w-4 text-eco-secondary" />
+                      <span>{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowInstructions(false);
+                handleJoinChallenge(challenge.id);
+              }}
+              className="w-full mt-6 bg-eco-primary text-white py-3 rounded-lg hover:bg-eco-secondary flex items-center justify-center space-x-2"
+            >
+              <span>Start Challenge</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   const renderVerificationSection = (challenge: any) => {
     const verification = verificationData[challenge.id];
@@ -260,6 +354,12 @@ const Challenges = () => {
                         </div>
                       </div>
                     </div>
+                    <button
+                      onClick={() => setShowInstructions(true)}
+                      className="text-eco-primary hover:text-eco-secondary"
+                    >
+                      <Info className="h-5 w-5" />
+                    </button>
                   </div>
 
                   {renderVerificationSection(challenge)}
@@ -272,11 +372,13 @@ const Challenges = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md: <boltAction type="file" filePath="src/components/Challenges.tsx">grid-cols-2 gap-4">
                       {challenge.milestones.map((milestone, index) => (
                         <div
                           key={index}
-                          className="flex items-center space-x-3 p-3 rounded-lg bg-eco-background"
+                          className={`flex items-center space-x-3 p-3 rounded-lg ${
+                            milestone.completed ? 'bg-eco-accent/20' : 'bg-eco-background'
+                          }`}
                         >
                           <div className={`p-1 rounded-full ${
                             milestone.completed ? 'bg-green-100' : 'bg-gray-100'
@@ -312,14 +414,23 @@ const Challenges = () => {
               className="bg-white rounded-lg shadow-md overflow-hidden"
             >
               <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-eco-accent rounded-lg">
-                    <challenge.icon className="h-6 w-6 text-eco-primary" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-eco-accent rounded-lg">
+                      <challenge.icon className="h-6 w-6 text-eco-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold text-eco-primary">{challenge.title}</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-eco-primary">{challenge.title}</h3>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    challenge.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                    challenge.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {challenge.difficulty}
+                  </div>
                 </div>
                 <p className="text-gray-600 mb-4">{challenge.description}</p>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Category:</span>
                     <span className="font-semibold capitalize">{challenge.category}</span>
@@ -332,14 +443,6 @@ const Challenges = () => {
                     </div>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Difficulty:</span>
-                    <span className={`font-semibold ${
-                      challenge.difficulty === 'Easy' ? 'text-green-500' :
-                      challenge.difficulty === 'Medium' ? 'text-yellow-500' :
-                      'text-red-500'
-                    }`}>{challenge.difficulty}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Participants:</span>
                     <div className="flex items-center space-x-1">
                       <Users className="h-4 w-4 text-eco-secondary" />
@@ -348,20 +451,35 @@ const Challenges = () => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => handleJoinChallenge(challenge.id)}
-                className={`w-full py-3 font-semibold transition-colors ${
-                  isJoined
-                    ? 'bg-eco-secondary text-white hover:bg-eco-primary'
-                    : 'bg-eco-primary text-white hover:bg-eco-secondary'
-                }`}
-              >
-                {isJoined ? 'Leave Challenge' : 'Join Challenge'}
-              </button>
+              <div className="p-4 bg-eco-background border-t border-gray-100">
+                <h4 className="font-semibold text-eco-primary mb-2">Requirements:</h4>
+                <ul className="space-y-2">
+                  {challenge.requirements.map((req, index) => (
+                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-600">
+                      <CheckCircle className="h-4 w-4 text-eco-secondary flex-shrink-0 mt-0.5" />
+                      <span>{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowInstructions(true)}
+                  className={`w-full py-3 font-semibold rounded-lg transition-colors ${
+                    isJoined
+                      ? 'bg-eco-secondary text-white hover:bg-eco-primary'
+                      : 'bg-eco-primary text-white hover:bg-eco-secondary'
+                  }`}
+                >
+                  {isJoined ? 'View Progress' : 'Start Challenge'}
+                </button>
+              </div>
             </motion.div>
           );
         })}
       </div>
+
+      {challenges.map(challenge => renderInstructionsModal(challenge))}
     </div>
   );
 };
