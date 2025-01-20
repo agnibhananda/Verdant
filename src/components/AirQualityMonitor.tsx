@@ -37,8 +37,8 @@ export const AirQualityMonitor = () => {
           .map(response => {
             const data = response.data;
             return {
-              location: data.city.name,
-              city: "New Delhi",
+              location: "New Delhi",
+              city: data.city.name.split(',')[0],
               aqi: data.aqi,
               dominantPollutant: data.dominentpol || 'Unknown',
               lastUpdated: new Date(data.time.iso).toLocaleString()
