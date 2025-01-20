@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award, Upload, Star, Info, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Droplet, Zap, Recycle, Camera, Users, MapPin, Phone, CheckCircle, Clock, Award, Upload, Star, Info, ArrowRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Challenges = () => {
@@ -371,13 +371,6 @@ const Challenges = () => {
                         style={{ width: '45%' }}
                       />
                     </div>
-                    <div className="mt-4 space-y-4">
-                    <div className="bg-eco-background rounded-full h-2 overflow-hidden">
-                      <div
-                        className="bg-eco-primary h-full rounded-full transition-all duration-500"
-                        style={{ width: '45%' }}
-                      />
-                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {challenge.milestones.map((milestone, index) => (
@@ -396,32 +389,7 @@ const Challenges = () => {
                               <Clock className="h-5 w-5 text-gray-400" />
                             )}
                           </div>
-                          <div>
-                            <p className="font-medium text-eco-primary">{milestone.title}</p>
-                            <p className="text-sm text-gray-600">+{milestone.points} points</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                    <div className="grid grid-cols-1 md: <boltAction type="file" filePath="src/components/Challenges.tsx">grid-cols-2 gap-4">
-                      {challenge.milestones.map((milestone, index) => (
-                        <div
-                          key={index}
-                          className={`flex items-center space-x-3 p-3 rounded-lg ${
-                            milestone.completed ? 'bg-eco-accent/20' : 'bg-eco-background'
-                          }`}
-                        >
-                          <div className={`p-1 rounded-full ${
-                            milestone.completed ? 'bg-green-100' : 'bg-gray-100'
-                          }`}>
-                            {milestone.completed ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <Clock className="h-5 w-5 text-gray-400" />
-                            )}
-                          </div>
-                          <div>
+                          <div> ```jsx
                             <p className="font-medium text-eco-primary">{milestone.title}</p>
                             <p className="text-sm text-gray-600">+{milestone.points} points</p>
                           </div>
