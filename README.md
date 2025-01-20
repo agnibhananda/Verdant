@@ -117,12 +117,9 @@ src/
 4. Push to the branch
 5. Open a Pull Request
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgments
-- OpenAQ API for air quality data
-- Supabase team for the backend infrastructure
+- World Air Quality Index API for air quality data
+- Supabase for the backend infrastructure
 - Community contributors
 
 ## Impact
