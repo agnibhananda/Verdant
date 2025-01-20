@@ -1,21 +1,28 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Medal, Award, Calendar, Camera, Edit2, Save, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase';
+import { updateProfile, getProfile } from '../lib/database';
 
 const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editMode, setEditMode] = useState(false);
-  const [profileImage, setProfileImage] = useState<string>("https://i.pinimg.com/1200x/aa/20/61/aa2061e33d62e60f2cfcded5d638c78b.jpg");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string>("/avatar.jpg");
   
   const [userProfile, setUserProfile] = useState({
-    name: 'Agnibha Nanda',
+    id: '',
+    username: '',
+    full_name: '',
+    avatar_url: '',
+    bio: '',
+    email: '',
+    points: 0,
     badge: 'Earth Guardian',
-    points: 420,
-    joinDate: 'January 2025',
-    completedChallenges: 12,
-    currentStreak: 15,
-    bio: 'Passionate about environmental conservation and sustainable living.',
-    email: 'agnibhananda@gmail.com'
+    completedChallenges: 0,
+    currentStreak: 0,
+    joinDate: new Date().toISOString()
   });
 
   const [editableProfile, setEditableProfile] = useState({ ...userProfile });
@@ -55,20 +62,95 @@ const Profile = () => {
     }
   ]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+ useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const profile = await getProfile(user.id);
+          if (profile) {
+            setUserProfile(prev => ({
+              ...prev,
+              ...profile,
+              id: user.id,
+              email: user.email || ''
+            }));
+            setEditableProfile(prev => ({
+              ...prev,
+              ...profile,
+              id: user.id,
+              email: user.email || ''
+            }));
+            if (profile.avatar_url) {
+              setProfileImage(profile.avatar_url);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        setError('Failed to load profile');
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setLoading(true);
+      
+      // Upload image to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      await updateProfile({
+        id: userProfile.id,
+        avatar_url: publicUrl
+      });
+
+      setProfileImage(publicUrl);
+      setUserProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (editMode) {
-      setUserProfile(editableProfile);
+      setLoading(true);
+      setError(null);
+      try {
+        const updatedProfile = await updateProfile({
+          id: editableProfile.id,
+          username: editableProfile.username,
+          full_name: editableProfile.full_name,
+          bio: editableProfile.bio
+        });
+        setUserProfile(prev => ({ ...prev, ...updatedProfile }));
+      } catch (err) {
+        console.error('Error updating profile:', err);
+        setError('Failed to update profile');
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
     setEditMode(!editMode);
   };
@@ -76,7 +158,9 @@ const Profile = () => {
   const handleCancel = () => {
     setEditableProfile({ ...userProfile });
     setEditMode(false);
+    setError(null);
   };
+
 
   return (
     <div className="space-y-8">
