@@ -79,22 +79,22 @@ const Profile = () => {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8 p-4 md:p-0">
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-start justify-between mb-6">
-          <div className="flex flex-col md:flex-row items-center md:space-x-6 mb-4 md:mb-0">
-            <div className="relative mb-4 md:mb-0">
+    <div className="space-y-8">
+      <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center space-x-6">
+            <div className="relative">
               <motion.img
                 whileHover={{ scale: 1.05 }}
                 src={profileImage}
                 alt="Profile"
-                className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover"
+                className="w-24 h-24 rounded-full object-cover"
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 bg-eco-primary p-1.5 md:p-2 rounded-full text-white hover:bg-eco-secondary transition-colors"
+                className="absolute bottom-0 right-0 bg-eco-primary p-2 rounded-full text-white hover:bg-eco-secondary transition-colors"
               >
-                <Camera className="h-3 w-3 md:h-4 md:w-4" />
+                <Camera className="h-4 w-4" />
               </button>
               <input
                 type="file"
@@ -104,37 +104,37 @@ const Profile = () => {
                 className="hidden"
               />
             </div>
-            <div className="text-center md:text-left">
+            <div>
               {editMode ? (
                 <input
                   type="text"
                   value={editableProfile.name}
                   onChange={(e) => setEditableProfile({ ...editableProfile, name: e.target.value })}
-                  className="text-xl md:text-3xl font-bold text-eco-primary bg-eco-background rounded px-2 py-1 mb-2"
+                  className="text-3xl font-bold text-eco-primary bg-eco-background rounded px-2 py-1 mb-2"
                 />
               ) : (
-                <h2 className="text-xl md:text-3xl font-bold text-eco-primary">{userProfile.name}</h2>
+                <h2 className="text-3xl font-bold text-eco-primary">{userProfile.name}</h2>
               )}
-              <div className="flex items-center justify-center md:justify-start space-x-2">
-                <Award className="h-4 w-4 md:h-5 md:w-5 text-eco-secondary" />
-                <span className="text-eco-secondary font-semibold text-sm md:text-base">{userProfile.badge}</span>
+              <div className="flex items-center space-x-2">
+                <Award className="h-5 w-5 text-eco-secondary" />
+                <span className="text-eco-secondary font-semibold">{userProfile.badge}</span>
               </div>
             </div>
           </div>
-          <div className="flex justify-center md:justify-end space-x-2">
+          <div className="flex space-x-2">
             {editMode ? (
               <>
                 <button
                   onClick={handleCancel}
                   className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  <X className="h-4 w-4 md:h-5 md:w-5" />
+                  <X className="h-5 w-5" />
                 </button>
                 <button
                   onClick={handleEditSave}
                   className="p-2 text-eco-primary hover:text-eco-secondary transition-colors"
                 >
-                  <Save className="h-4 w-4 md:h-5 md:w-5" />
+                  <Save className="h-5 w-5" />
                 </button>
               </>
             ) : (
@@ -142,7 +142,7 @@ const Profile = () => {
                 onClick={handleEditSave}
                 className="p-2 text-eco-primary hover:text-eco-secondary transition-colors"
               >
-                <Edit2 className="h-4 w-4 md:h-5 md:w-5" />
+                <Edit2 className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -156,7 +156,7 @@ const Profile = () => {
                 type="email"
                 value={editableProfile.email}
                 onChange={(e) => setEditableProfile({ ...editableProfile, email: e.target.value })}
-                className="w-full bg-eco-background rounded px-3 py-2 text-sm md:text-base"
+                className="w-full bg-eco-background rounded px-3 py-2"
               />
             </div>
             <div>
@@ -164,71 +164,71 @@ const Profile = () => {
               <textarea
                 value={editableProfile.bio}
                 onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
-                className="w-full bg-eco-background rounded px-3 py-2 h-20 md:h-24 text-sm md:text-base"
+                className="w-full bg-eco-background rounded px-3 py-2 h-24"
               />
             </div>
           </div>
         ) : (
           <div className="mb-6">
-            <p className="text-sm md:text-base text-gray-600">{userProfile.bio}</p>
-            <p className="text-xs md:text-sm text-gray-500 mt-2">{userProfile.email}</p>
+            <p className="text-gray-600">{userProfile.bio}</p>
+            <p className="text-sm text-gray-500 mt-2">{userProfile.email}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-eco-background rounded-lg p-3 md:p-4"
+            className="bg-eco-background rounded-lg p-4"
           >
             <div className="flex items-center space-x-2">
-              <Medal className="h-4 w-4 md:h-5 md:w-5 text-eco-primary" />
-              <span className="text-xs md:text-sm text-gray-600">Total Points</span>
+              <Medal className="h-5 w-5 text-eco-primary" />
+              <span className="text-sm text-gray-600">Total Points</span>
             </div>
-            <p className="text-lg md:text-2xl font-bold text-eco-primary mt-2">{userProfile.points}</p>
+            <p className="text-2xl font-bold text-eco-primary mt-2">{userProfile.points}</p>
           </motion.div>
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-eco-background rounded-lg p-3 md:p-4"
+            className="bg-eco-background rounded-lg p-4"
           >
             <div className="flex items-center space-x-2">
-              <Award className="h-4 w-4 md:h-5 md:w-5 text-eco-primary" />
-              <span className="text-xs md:text-sm text-gray-600">Completed Challenges</span>
+              <Award className="h-5 w-5 text-eco-primary" />
+              <span className="text-sm text-gray-600">Completed Challenges</span>
             </div>
-            <p className="text-lg md:text-2xl font-bold text-eco-primary mt-2">{userProfile.completedChallenges}</p>
+            <p className="text-2xl font-bold text-eco-primary mt-2">{userProfile.completedChallenges}</p>
           </motion.div>
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="bg-eco-background rounded-lg p-3 md:p-4"
+            className="bg-eco-background rounded-lg p-4"
           >
             <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 md:h-5 md:w-5 text-eco-primary" />
-              <span className="text-xs md:text-sm text-gray-600">Current Streak</span>
+              <Calendar className="h-5 w-5 text-eco-primary" />
+              <span className="text-sm text-gray-600">Current Streak</span>
             </div>
-            <p className="text-lg md:text-2xl font-bold text-eco-primary mt-2">{userProfile.currentStreak} days</p>
+            <p className="text-2xl font-bold text-eco-primary mt-2">{userProfile.currentStreak} days</p>
           </motion.div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 md:p-8">
-        <h3 className="text-lg md:text-xl font-bold text-eco-primary mb-4 md:mb-6">Achievements</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg shadow-md p-8">
+        <h3 className="text-xl font-bold text-eco-primary mb-6">Achievements</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {achievements.map((achievement) => (
             <motion.div
               key={achievement.id}
               whileHover={{ scale: 1.02 }}
-              className={`p-3 md:p-4 rounded-lg ${
+              className={`p-4 rounded-lg ${
                 achievement.unlocked ? 'bg-eco-background' : 'bg-gray-100'
               }`}
             >
               <div className="flex items-center space-x-3 mb-2">
-                <span className="text-xl md:text-2xl">{achievement.icon}</span>
+                <span className="text-2xl">{achievement.icon}</span>
                 <div>
-                  <h4 className={`font-semibold text-sm md:text-base ${
+                  <h4 className={`font-semibold ${
                     achievement.unlocked ? 'text-eco-primary' : 'text-gray-500'
                   }`}>
                     {achievement.title}
                   </h4>
-                  <p className="text-xs md:text-sm text-gray-600">{achievement.description}</p>
+                  <p className="text-sm text-gray-600">{achievement.description}</p>
                 </div>
               </div>
               {achievement.unlocked ? (
