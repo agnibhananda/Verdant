@@ -1,5 +1,8 @@
 # Verdant - Personal EcoBuddy
-
+## Login Details : 
+Please Login using 
+Email: agnibhananda@gmail.com 
+Password: @Rudra42
 ## Problem Statement
 Individuals struggle to understand and track their carbon footprint, making it harder to adopt sustainable habits.
 
